@@ -1,0 +1,40 @@
+name: macOS application
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          curl --fail --location https://www.python.org/ftp/python/3.13.2/python-3.13.2-macos11.pkg --output "$RUNNER_TEMP/python.pkg"
+          sudo installer -pkg "$RUNNER_TEMP/python.pkg" -target /
+          brew install tesseract
+      - name: Install pinned Python dependencies
+        run: |
+          /Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -m venv .venv-build
+          .venv-build/bin/python -m pip install -r requirements-build.txt
+      - name: Test and build application
+        run: .venv-build/bin/python tools/build_macos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KnotStudio-macOS-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+            dist/verification.json
+          retention-days: 14

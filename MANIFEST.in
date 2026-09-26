@@ -1,0 +1,11 @@
+include LICENSE README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
+include requirements*.txt
+recursive-include docs *.md *.html *.svg
+recursive-include licenses *
+recursive-include examples *.png *.jpg *.json *.md *.html
+recursive-include demo *.mp4 *.jpg *.md *.srt
+recursive-include packaging *.py *.spec *.plist *.icns *.png *.svg *.md
+recursive-include tools *.py
+recursive-include tests *.py *.md
+recursive-include .github *.yml
+global-exclude .DS_Store *.pyc __pycache__

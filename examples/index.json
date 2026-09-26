@@ -1,0 +1,430 @@
+{
+  "schema_version": 1,
+  "description": "Small demonstration set. Feature tags describe visible image content, not successful automatic recognition. Image paths are relative to this directory.",
+  "image_license_notice": "../licenses/IMAGES.md",
+  "examples": [
+    {
+      "id": "trefoil",
+      "path": "snappy/trefoil.png",
+      "title": "Trefoil \u2014 SnapPy render",
+      "medium": "program",
+      "features": [
+        "clean",
+        "single-component"
+      ],
+      "usage": "starter",
+      "description": "Three crossings in a clean generated projection.",
+      "width": 1536,
+      "height": 1536,
+      "sha256": "d426e13acd563852d9ea288ec7ccc5924fd9fcf61a7d30cb853824d2d70135d7",
+      "source": {
+        "kind": "project-generated-render",
+        "reference": "3a1.png",
+        "sha256": "d426e13acd563852d9ea288ec7ccc5924fd9fcf61a7d30cb853824d2d70135d7",
+        "software": "SnapPy 3.3.3a3 / Spherogram 2.4.1 / PLink 2.4.9",
+        "url": "https://snappy.computop.org/",
+        "attribution": "Marc Culler, Nathan M. Dunfield, Matthias Goerner, and Jeffrey R. Weeks; PLink and Spherogram contributors",
+        "table_entry": "K3a1",
+        "generation": "Rendered locally using PLink layout, gap construction, colors, and cubic smoothing; rasterized with Matplotlib. Not downloaded from a website."
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      },
+      "reference_diagram": {
+        "crossings": 3,
+        "components": 1,
+        "pd_code": [
+          [
+            2,
+            0,
+            3,
+            5
+          ],
+          [
+            4,
+            2,
+            5,
+            1
+          ],
+          [
+            0,
+            4,
+            1,
+            3
+          ]
+        ],
+        "convention": "Zero-based SnapPy/PLink PD for the intended underlying diagram; arc labels and orientations can differ after recognition."
+      }
+    },
+    {
+      "id": "figure-eight",
+      "path": "snappy/figure-eight.png",
+      "title": "Figure-eight \u2014 SnapPy render",
+      "medium": "program",
+      "features": [
+        "clean",
+        "single-component"
+      ],
+      "usage": "starter",
+      "description": "Four crossings in a clean generated projection.",
+      "width": 1536,
+      "height": 1536,
+      "sha256": "3fdedd8f20cbe44bed5c8af2f18e2b4afacdd4f36672704a8df5b928a2ac92eb",
+      "source": {
+        "kind": "project-generated-render",
+        "reference": "4a1.png",
+        "sha256": "3fdedd8f20cbe44bed5c8af2f18e2b4afacdd4f36672704a8df5b928a2ac92eb",
+        "software": "SnapPy 3.3.3a3 / Spherogram 2.4.1 / PLink 2.4.9",
+        "url": "https://snappy.computop.org/",
+        "attribution": "Marc Culler, Nathan M. Dunfield, Matthias Goerner, and Jeffrey R. Weeks; PLink and Spherogram contributors",
+        "table_entry": "K4a1",
+        "generation": "Rendered locally using PLink layout, gap construction, colors, and cubic smoothing; rasterized with Matplotlib. Not downloaded from a website."
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      },
+      "reference_diagram": {
+        "crossings": 4,
+        "components": 1,
+        "pd_code": [
+          [
+            2,
+            7,
+            3,
+            0
+          ],
+          [
+            4,
+            2,
+            5,
+            1
+          ],
+          [
+            6,
+            3,
+            7,
+            4
+          ],
+          [
+            0,
+            6,
+            1,
+            5
+          ]
+        ],
+        "convention": "Zero-based SnapPy/PLink PD for the intended underlying diagram; arc labels and orientations can differ after recognition."
+      }
+    },
+    {
+      "id": "borromean-link",
+      "path": "snappy/borromean-link.png",
+      "title": "Three-component link \u2014 SnapPy render",
+      "medium": "program",
+      "features": [
+        "clean",
+        "colored",
+        "multi-component"
+      ],
+      "usage": "starter",
+      "description": "Six crossings and three components in SnapPy table entry L6a4.",
+      "width": 1536,
+      "height": 1536,
+      "sha256": "51808ad78322cdab15388ddbba73a0369c455dd320dd8169cf654a92d9f5550a",
+      "source": {
+        "kind": "project-generated-render",
+        "reference": "L6a4.png",
+        "sha256": "51808ad78322cdab15388ddbba73a0369c455dd320dd8169cf654a92d9f5550a",
+        "software": "SnapPy 3.3.3a3 / Spherogram 2.4.1 / PLink 2.4.9",
+        "url": "https://snappy.computop.org/",
+        "attribution": "Marc Culler, Nathan M. Dunfield, Matthias Goerner, and Jeffrey R. Weeks; PLink and Spherogram contributors",
+        "table_entry": "L6a4",
+        "generation": "Rendered locally using PLink layout, gap construction, colors, and cubic smoothing; rasterized with Matplotlib. Not downloaded from a website."
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      },
+      "reference_diagram": {
+        "crossings": 6,
+        "components": 3,
+        "pd_code": [
+          [
+            7,
+            3,
+            4,
+            0
+          ],
+          [
+            5,
+            2,
+            6,
+            1
+          ],
+          [
+            9,
+            5,
+            10,
+            4
+          ],
+          [
+            11,
+            6,
+            8,
+            7
+          ],
+          [
+            2,
+            9,
+            3,
+            8
+          ],
+          [
+            0,
+            10,
+            1,
+            11
+          ]
+        ],
+        "convention": "Zero-based SnapPy/PLink PD for the intended underlying diagram; arc labels and orientations can differ after recognition."
+      }
+    },
+    {
+      "id": "labeled-figure-eight",
+      "path": "blackboard/labeled-figure-eight.png",
+      "title": "Blackboard with a handwritten label",
+      "medium": "blackboard",
+      "features": [
+        "photograph",
+        "labels"
+      ],
+      "usage": "challenge",
+      "description": "Chalk texture, wide crossing gaps, and an external handwritten label.",
+      "width": 683,
+      "height": 585,
+      "sha256": "478f93a379ca6cf46c5c9c4283a4bc653f1421c92aef0e5bfc067a1c2eef4538",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_6730-02-upper-center.png",
+        "sha256": "5d511b379f28d932d063a12a6cc64ce2e52dfb987a4bf2b3432ade0c3968b989",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "colored-chain",
+      "path": "blackboard/colored-chain.png",
+      "title": "Colored blackboard chain",
+      "medium": "blackboard",
+      "features": [
+        "photograph",
+        "colored",
+        "orientation-arrows"
+      ],
+      "usage": "challenge",
+      "description": "Colored chalk and orientation arrows; inspect all inferred connections.",
+      "width": 857,
+      "height": 385,
+      "sha256": "6a39bbf5c892789addbabfba511e84892ec30bc450705a9d32a2b3affeafc215",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_6730-08-bottom-colored-chain.png",
+        "sha256": "321bf44c532bbd293f8c53b04cd275ab9dac35ea37da3e4449cf4d00bed9dd82",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "hopf",
+      "path": "blackboard/hopf.png",
+      "title": "Blackboard Hopf link",
+      "medium": "blackboard",
+      "features": [
+        "photograph"
+      ],
+      "usage": "challenge",
+      "description": "An uncluttered chalk example with a broad crossing gap.",
+      "width": 1039,
+      "height": 653,
+      "sha256": "8716450a39d69e6c03d11dfdbc9623f5d0e5068b8108687102aea0b597c63c29",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_6740-02-top-right.png",
+        "sha256": "e7b2b7c47efdbd16e09fb284b189ff79f6120f026f0596ea42173576a7cb8fee",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "boxed-parallel",
+      "path": "ipad/boxed-parallel.png",
+      "title": "iPad negative twist box",
+      "medium": "ipad",
+      "features": [
+        "twist-box",
+        "parallel-strands"
+      ],
+      "usage": "challenge",
+      "description": "A -1 twist box on three strands with two exterior crossings.",
+      "width": 474,
+      "height": 396,
+      "sha256": "f6ab03139e7e36db24f2d138c13f4e2d917cb44e79261960be4e14f716b2fa1e",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_0015.jpg",
+        "sha256": "e86876d26aed1d87182d6fd12daf258d2bcd34f21013de7c50889aa05b5fac6d",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "parallel-omissions",
+      "path": "ipad/parallel-omissions.png",
+      "title": "iPad parallel-strand omissions",
+      "medium": "ipad",
+      "features": [
+        "twist-box",
+        "parallel-strands",
+        "parallel-omissions"
+      ],
+      "usage": "challenge",
+      "description": "A -2 twist box and underpassing strokes omitted across an entire strand bundle.",
+      "width": 882,
+      "height": 827,
+      "sha256": "a60c4df85bbbcd43918e44a2bf5303a688d21fbe9c3b7a8d944e6af846a67587",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_0021.jpg",
+        "sha256": "a1c09c9e9f1d54e7754e0c90d3811f10c11a1bcdbf825fa8afd9d86251f5537c",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "labeled-oriented-box",
+      "path": "ipad/labeled-oriented-box.png",
+      "title": "iPad labeled and oriented twist box",
+      "medium": "ipad",
+      "features": [
+        "labels",
+        "orientation-arrows",
+        "twist-box",
+        "parallel-strands"
+      ],
+      "usage": "challenge",
+      "description": "A +1 twist box on three strands, orientation arrows, and a blue 0 label. Delete the marked label before recognition.",
+      "width": 1062,
+      "height": 1011,
+      "sha256": "4bc82662e35cfa81855e26748c2ff08a9b3ea41dd98091580d5c4e0761fad35f",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_0035.jpg",
+        "sha256": "da3227cce184b0cf295571d51abd3c8a00b6586d7cc5f1e42696b5e439ceb3b2",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "labeled-knot",
+      "path": "ipad/labeled-knot.png",
+      "title": "iPad knot with a handwritten label",
+      "medium": "ipad",
+      "features": [
+        "labels"
+      ],
+      "usage": "challenge",
+      "description": "A monochrome drawing with a small handwritten label near the lower edge.",
+      "width": 432,
+      "height": 473,
+      "sha256": "f0ce3e56e1faca548b08471ec684812b30b0cbc71bc97f71bb6d573bc64d5935",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_0029.jpg",
+        "sha256": "48214ff0a7f8a734f2f42005ae3c1891800afc8fdb8a8b6d28d9d6065f7baefa",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    },
+    {
+      "id": "dense-twists",
+      "path": "ipad/dense-twists.png",
+      "title": "iPad dense twist sequence",
+      "medium": "ipad",
+      "features": [
+        "dense-crossings"
+      ],
+      "usage": "challenge",
+      "description": "Repeated close crossings; check the overlay before using the reconstructed diagram.",
+      "width": 448,
+      "height": 890,
+      "sha256": "a2f5afd13ad44cddcf263624f4483cadf34cf9d42feb86ad2615837702e124e7",
+      "source": {
+        "kind": "user-supplied-original",
+        "reference": "IMG_0072__diagram-04.png",
+        "sha256": "85a626ca9a9b5b40b7e9af9ba47c198242dc4c6d15445ea6fcfb6f86d740c075",
+        "attribution": "Project owner, user-supplied drawing or photograph"
+      },
+      "processing": "EXIF orientation applied if present; decoded pixels preserved; saved as PNG without EXIF, text, or other ancillary metadata. No rescaling or redrawing.",
+      "license": {
+        "id": "LicenseRef-Owner-Authorized-Release",
+        "status": "included-at-project-owner-request",
+        "notice": "../licenses/IMAGES.md"
+      }
+    }
+  ],
+  "external_references": [
+    {
+      "title": "KnotInfo 8_8 diagrams",
+      "url": "https://knotinfo.org/diagram_display.php?8_8",
+      "attribution": "Charles Livingston and Allison H. Moore, KnotInfo: Table of Knot Invariants",
+      "license_status": "Image redistribution permission not established; link only, no downloaded snapshot bundled."
+    },
+    {
+      "title": "KnotInfo diagram sources and acknowledgments",
+      "url": "https://knotinfo.org/homelinks/about.html",
+      "license_status": "Attribution information; not an image license."
+    }
+  ]
+}

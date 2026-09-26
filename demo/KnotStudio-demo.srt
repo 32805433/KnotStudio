@@ -1,0 +1,175 @@
+1
+00:00:00,000 --> 00:00:05,000
+Demo using actual Knot Studio results, a recreated interface, and shortened timings.
+
+2
+00:00:05,000 --> 00:00:08,000
+Load a blackboard photograph and recognize the link automatically.
+
+3
+00:00:08,000 --> 00:00:09,500
+Recognize drawing converts the picture into an editable diagram.
+
+4
+00:00:09,500 --> 00:00:13,000
+Five components, eight crossings. Needs review: inspect the crossings inferred from chalk.
+
+5
+00:00:13,000 --> 00:00:16,000
+Load an iPad drawing and recognize its strands and crossings.
+
+6
+00:00:16,000 --> 00:00:17,500
+Recognize drawing converts the picture into an editable diagram.
+
+7
+00:00:17,500 --> 00:00:21,000
+The iPad sketch becomes a knot with six crossings and one component.
+
+8
+00:00:21,000 --> 00:00:24,000
+Load a figure from a research paper. Review the marked labels before recognizing.
+
+9
+00:00:24,000 --> 00:00:27,000
+Remove the four marked numeric labels while preserving the strands.
+
+10
+00:00:27,000 --> 00:00:28,500
+Recognize drawing converts the picture into an editable diagram.
+
+11
+00:00:28,500 --> 00:00:32,000
+The cleaned paper figure becomes an editable four-crossing knot.
+
+12
+00:00:32,000 --> 00:00:34,500
+Start a new sketch. We will use this one figure-eight for every operation that follows.
+
+13
+00:00:34,500 --> 00:00:47,500
+Draw one closed strand. Hold Shift at an undercrossing; the other strokes pass over.
+
+14
+00:00:47,500 --> 00:00:49,500
+Recognize the hand-drawn figure-eight to start editing.
+
+15
+00:00:49,500 --> 00:00:53,000
+Four crossings, one component. Keep this view fixed throughout the editing session.
+
+16
+00:00:53,000 --> 00:01:04,000
+Hold Shift and pull a strand underneath its neighbors to add crossing pairs: 4 → 8 crossings.
+
+17
+00:01:04,000 --> 00:01:06,500
+Watch the small triangle on the right. Slide the selected strand to the left; keep the view fixed.
+
+18
+00:01:06,500 --> 00:01:15,500
+Continue on the same figure-eight. Slide a strand past a crossing; the crossing count stays unchanged.
+
+19
+00:01:15,500 --> 00:01:18,000
+Choose Add curl… and select the sign of the new crossing.
+
+20
+00:01:18,000 --> 00:01:21,000
+Choose a positive curl, then place it on the strand.
+
+21
+00:01:21,000 --> 00:01:24,000
+Click a strand point, then the side where the curl should appear.
+
+22
+00:01:24,000 --> 00:01:26,500
+The new curl adds one crossing while preserving the knot type.
+
+23
+00:01:26,500 --> 00:01:28,500
+Choose Add curl… again to add a second curl.
+
+24
+00:01:28,500 --> 00:01:31,000
+Choose a negative curl, then place it on the strand.
+
+25
+00:01:31,000 --> 00:01:34,000
+Choose a strand point and a side for this second curl.
+
+26
+00:01:34,000 --> 00:01:36,500
+The new curl adds one crossing while preserving the knot type.
+
+27
+00:01:36,500 --> 00:01:39,500
+Simplification 1: click the green curl. Crossings: 10 → 9.
+
+28
+00:01:39,500 --> 00:01:41,500
+The same figure-eight remains. Each click is a separate simplification and undo step.
+
+29
+00:01:41,500 --> 00:01:44,500
+Simplification 2: click the green curl. Crossings: 9 → 8.
+
+30
+00:01:44,500 --> 00:01:46,500
+The same figure-eight remains. Each click is a separate simplification and undo step.
+
+31
+00:01:46,500 --> 00:01:49,500
+Simplification 3: click the purple bigon. Crossings: 8 → 6.
+
+32
+00:01:49,500 --> 00:01:51,500
+The same figure-eight remains. Each click is a separate simplification and undo step.
+
+33
+00:01:51,500 --> 00:01:54,000
+Choose Minimize energy… and circle the rough part of this diagram.
+
+34
+00:01:54,000 --> 00:01:57,500
+Enclose the bends to smooth. The strands outside the selected region stay fixed.
+
+35
+00:01:57,500 --> 00:02:07,500
+The selected rough region relaxes. Exterior strands stay fixed and the PD code is preserved.
+
+36
+00:02:07,500 --> 00:02:10,000
+Stop keeps the improved layout. Undo restores the diagram from before the run.
+
+37
+00:02:10,000 --> 00:02:13,000
+Enable Full screen region, then minimize the whole visible figure-eight in the same fixed view.
+
+38
+00:02:13,000 --> 00:02:23,000
+Continue from the local result. The whole visible diagram relaxes with the same PD code.
+
+39
+00:02:23,000 --> 00:02:25,500
+Stop keeps the improved layout. Undo restores the diagram from before the run.
+
+40
+00:02:25,500 --> 00:02:29,000
+Keep the final diagram on screen and scroll down to its code tabs.
+
+41
+00:02:29,000 --> 00:02:34,000
+The PD code belongs to this final figure-eight. Hover over the code box to copy it.
+
+42
+00:02:34,000 --> 00:02:40,000
+Switch to TikZ code. This same diagram exports with the smooth curves shown on the canvas.
+
+43
+00:02:40,000 --> 00:02:43,500
+Use Save… → TikZ code to export this figure as a .tex file.
+
+44
+00:02:43,500 --> 00:02:47,500
+Draw, recognize, and manipulate your knot diagram.

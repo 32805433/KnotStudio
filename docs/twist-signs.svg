@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="350" viewBox="0 0 800 350" role="img" aria-labelledby="title description">
+  <title id="title">Knot Studio's two-strand twist sign convention</title>
+  <desc id="description">View both bundles from top to bottom. For a positive half twist, plus one half, the strand starting at the top right passes over the one starting at the top left. For a negative half twist, minus one half, the top-left strand passes over the top-right strand. The arrow at the left indicates the viewing direction along the box, not a component orientation.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="800" height="350" fill="white"/>
+  <g font-family="system-ui, sans-serif" text-anchor="middle" fill="#1e293b">
+    <text x="235" y="32" font-size="22" font-weight="600">Positive half twist: +1/2</text>
+    <text x="610" y="32" font-size="22" font-weight="600">Negative half twist: −1/2</text>
+    <text x="235" y="322" font-size="17">Top-right strand passes over</text>
+    <text x="610" y="322" font-size="17">Top-left strand passes over</text>
+    <text x="235" y="67" font-size="15" fill="#64748b">top</text>
+    <text x="610" y="67" font-size="15" fill="#64748b">top</text>
+  </g>
+  <path d="M58,108 L58,245" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="37" y="182" transform="rotate(-90 37 182)" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#64748b">along the box</text>
+  <g stroke="#cbd5e1" fill="none" stroke-dasharray="5 5">
+    <rect x="124" y="83" width="222" height="204" rx="8"/>
+    <rect x="499" y="83" width="222" height="204" rx="8"/>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Positive: the top-right strand goes over the top-left strand. -->
+    <path d="M165,95 L165,118 C165,166 305,204 305,252 L305,275" stroke="#245bdb" stroke-width="7"/>
+    <path d="M305,95 L305,118 C305,166 165,204 165,252 L165,275" stroke="white" stroke-width="19"/>
+    <path d="M305,95 L305,118 C305,166 165,204 165,252 L165,275" stroke="#245bdb" stroke-width="7"/>
+    <!-- Negative: the top-left strand goes over the top-right strand. -->
+    <path d="M680,95 L680,118 C680,166 540,204 540,252 L540,275" stroke="#245bdb" stroke-width="7"/>
+    <path d="M540,95 L540,118 C540,166 680,204 680,252 L680,275" stroke="white" stroke-width="19"/>
+    <path d="M540,95 L540,118 C540,166 680,204 680,252 L680,275" stroke="#245bdb" stroke-width="7"/>
+  </g>
+</svg>

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77", "wheel", "Markdown>=3.7"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knot-studio"
+version = "0.1.0"
+description = "Recognize, draw, and edit knot and link diagrams locally"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "licenses/*"]
+dependencies = ["numpy>=2.0", "scipy>=1.13", "scikit-image>=0.24", "opencv-python-headless>=4.10", "networkx>=3.3", "Pillow>=10.1"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+build = ["pyinstaller>=6.16", "build>=1.2", "Markdown>=3.7"]
+
+[project.scripts]
+knot-studio = "recognizer.app:main"
+knot-recognizer = "recognizer.__main__:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["recognizer*"]
+exclude = ["recognizer.tests*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+recognizer = ["models/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
