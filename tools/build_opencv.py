@@ -2,7 +2,7 @@
 """Build and install the release's OpenCV core/imgproc-only Python wheel.
 
 Uses the upstream source distribution, pinned by SHA-256, and the active Python.
-Only Apple's system libraries may be linked; no FFmpeg, Homebrew, GPU, or codecs.
+Builds natively on macOS, Windows x64, and Linux x86_64 without video or codecs.
 The resulting wheel stays in ignored build/opencv/wheels and is cached by a
 manifest of Python, architecture, source, and build options.
 """
@@ -42,8 +42,23 @@ CMAKE_ARGS = [
     '-DWITH_TIFF=OFF', '-DWITH_WEBP=OFF', '-DWITH_OPENEXR=OFF',
     '-DWITH_JASPER=OFF', '-DWITH_OPENJPEG=OFF', '-DWITH_AVIF=OFF',
     '-DBUILD_ZLIB=ON', '-DWITH_VTK=OFF', '-DWITH_QT=OFF', '-DWITH_GTK=OFF',
-    '-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0',
+    '-DWITH_MSMF=OFF', '-DWITH_DSHOW=OFF', '-DWITH_V4L=OFF',
 ]
+
+
+def cmake_flags(system=None, architecture=None):
+    system = system or sys.platform
+    architecture = architecture or platform.machine()
+    flags = list(CMAKE_ARGS)
+    if system == 'darwin':
+        flags += ['-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0',
+                  f'-DCMAKE_OSX_ARCHITECTURES={architecture}']
+    elif system == 'win32':
+        # The official Python interpreter uses the dynamic MSVC runtime.
+        flags += ['-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL']
+    elif not system.startswith('linux'):
+        raise ValueError(f'Unsupported build platform: {system}')
+    return flags
 
 
 def run(args, **kwargs):
@@ -72,7 +87,7 @@ def download(destination):
 
 def verify_installed():
     # A separate interpreter prevents reusing a previous cv2 from sys.modules.
-    code = '''import cv2, json, pathlib, subprocess
+    code = '''import cv2, json, pathlib, subprocess, sys
 p = pathlib.Path(cv2.__file__).parent
 marker = json.loads((p/'knotstudio_build.json').read_text())
 assert marker['source_sha256'] == %r
@@ -80,9 +95,9 @@ info = cv2.getBuildInformation()
 assert 'FFMPEG:                      YES' not in info
 assert not hasattr(cv2, 'VideoCapture'), 'Video module must not be bundled'
 assert not hasattr(cv2, 'imread'), 'Codec module must not be bundled'
-extensions = list(p.glob('*.so'))
+extensions = list(p.glob('*.so')) + list(p.glob('*.pyd'))
 assert extensions, 'OpenCV native extension missing'
-for extension in extensions:
+for extension in extensions if sys.platform == 'darwin' else []:
     links = subprocess.check_output(['/usr/bin/otool', '-L', str(extension)], text=True)
     for line in links.splitlines()[1:]:
         target = line.strip().split(' (')[0]
@@ -93,20 +108,20 @@ print(json.dumps({'version':cv2.__version__, 'modules':marker['modules'], 'exter
 
 
 def build(install=True, jobs=None):
-    if sys.platform != 'darwin':
-        raise SystemExit('The release OpenCV build currently targets macOS only.')
     work = ROOT/'build'/'opencv'
     wheels = work/'wheels'
     wheels.mkdir(parents=True, exist_ok=True)
-    flags = CMAKE_ARGS + [f'-DCMAKE_OSX_ARCHITECTURES={platform.machine()}']
+    flags = cmake_flags()
     manifest = {'version': VERSION, 'source_url': SOURCE_URL,
                 'source_sha256': SOURCE_SHA256,
                 'python': platform.python_version(), 'architecture':platform.machine(),
+                'platform': sys.platform, 'platform_release': platform.release(),
                 'requested_modules':['core','imgproc','python3'],
                 'modules':['core','flann','geometry','imgproc','python3'], 'cmake_args':flags,
                 'build_tools': {name: metadata.version(name) for name in
                                 ('numpy','cmake','ninja','scikit-build','setuptools','wheel')},
-                'minimum_macos':'15.0', 'typing_patch_revision':2, 'notices_revision':1}
+                'minimum_macos': '15.0' if sys.platform == 'darwin' else None,
+                'typing_patch_revision':2, 'notices_revision':1}
     key = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
     cache = wheels/key
     cached = list(cache.glob('*.whl')) if cache.is_dir() else []
@@ -155,8 +170,10 @@ def build(install=True, jobs=None):
         env = dict(os.environ)
         env.update(ENABLE_HEADLESS='1', ENABLE_CONTRIB='0', CMAKE_ARGS=' '.join(flags),
                    CMAKE_BUILD_PARALLEL_LEVEL=str(jobs or min(os.cpu_count() or 2, 8)),
-                   CMAKE_GENERATOR='Ninja', MACOSX_DEPLOYMENT_TARGET='15.0',
+                   CMAKE_GENERATOR='Ninja',
                    PATH=str(Path(sys.executable).parent)+os.pathsep+os.environ.get('PATH',''))
+        if sys.platform == 'darwin':
+            env['MACOSX_DEPLOYMENT_TARGET'] = '15.0'
         raw = work/'raw-wheel'/key
         raw.mkdir(parents=True, exist_ok=True)
         run([sys.executable, '-m', 'pip', 'wheel', '--no-deps', '--no-build-isolation',

@@ -1,7 +1,7 @@
 # Developer guide
 
 This guide is for running Knot Studio from source, changing its code, or building
-a release. Users of **Knot Studio.app** do not need Python, a terminal, or these
+a release. Users of the packaged app do not need Python, a terminal, or these
 steps. See the [user guide](USER_GUIDE.md) to use the packaged app.
 
 ## Set up a source checkout
@@ -28,6 +28,10 @@ python -m pip install -e '.[test]'
 python -m recognizer --gui
 ```
 
+On Windows PowerShell, use `py -3.13 -m venv .venv`, activate with
+`.venv\Scripts\Activate.ps1`, then run the same `python -m pip` and
+`python -m recognizer --gui` commands. Include Tk when installing Python.
+
 The virtual environment keeps dependencies separate from other Python projects.
 The editable installation makes source changes available without reinstalling
 the package and includes the test dependencies. In a new terminal, return to the
@@ -38,7 +42,7 @@ To run from source without editing or installing test dependencies, use
 
 Numeric OCR uses a local Tesseract executable when running from source. If OCR
 is unavailable, unread twist coefficients can be entered manually. The packaged
-macOS app already includes Tesseract, Python, and Tk.
+desktop app already includes Tesseract, Python, and Tk.
 
 ## Command-line recognition
 
@@ -98,8 +102,9 @@ Manually exercise affected desktop controls as well. See
 - [Architecture](ARCHITECTURE.md): dependencies, recognition APIs, and module boundaries.
 - [Twist-box implementation](TWIST_BOXES_TECHNICAL.md): storage, topology, and editing algorithms.
 - [Layout-energy implementation](ENERGY_TECHNICAL.md): forces, sampling, and boundary constraints.
-- [macOS build and release](BUILDING_MACOS.md): the dedicated build environment,
-  standalone packaging, signing, notarization, and release verification.
+- [Desktop builds and releases](BUILDING_DESKTOP.md): native packaging for all
+  three systems, dependencies, verification, and immutable release drafts.
+- [macOS signing](BUILDING_MACOS.md): Apple-specific signing and notarization.
 - [Third-party notices](THIRD_PARTY.md): attribution and dependency licensing.
 
 Release builds use their own pinned dependencies and build instructions; the

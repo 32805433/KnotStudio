@@ -57,7 +57,12 @@ def test_sample_resolution_cannot_escape_through_a_symlink(tmp_path, monkeypatch
     directory.mkdir()
     private = tmp_path / 'private.png'
     private.write_bytes(b'private')
-    (directory / 'shortcut.png').symlink_to(private)
+    try:
+        (directory / 'shortcut.png').symlink_to(private)
+    except OSError as error:
+        if sys.platform != 'win32' or getattr(error, 'winerror', None) != 1314:
+            raise
+        pytest.skip('Windows account lacks permission to create symlinks')
     monkeypatch.setattr(resources, 'resource_root', lambda: tmp_path)
     with pytest.raises(ValueError, match='unavailable'):
         resources.example_path({'path': 'shortcut.png'})

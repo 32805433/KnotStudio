@@ -1,51 +1,77 @@
 # Install and open Knot Studio
 
-Download [Knot Studio for Mac](https://github.com/32805433/KnotStudio/releases/download/v0.1.0/KnotStudio-0.1.0-macOS-arm64.zip)
-from the [Releases page](https://github.com/32805433/KnotStudio/releases).
+Choose a package from [Releases](https://github.com/32805433/KnotStudio/releases)
+for your operating system. If a platform is absent from a release, no packaged
+app for that platform is available in that version. Source ZIPs are for developers.
+Recognition runs on your computer and works offline.
 
 ## Requirements
 
-Version 0.1.0 requires an **Apple silicon Mac (M1 or later)** running
-**macOS 15.7.5 or later**. Check **Apple menu → About This Mac** if unsure.
-The packaged app does not support Intel Macs, Windows, or Linux.
+| Package | Target system |
+| --- | --- |
+| macOS ARM64 | Apple silicon (M1 or later), macOS 15.7.5 or later |
+| Windows x86-64 | Windows 11; Windows 10 22H2 is the compatibility target for the same download |
+| Linux x86-64 | Ubuntu 24.04 LTS or later, with X11 or XWayland |
 
-Recognition runs on your Mac and works offline.
+Intel Macs and Windows/Linux ARM devices do not have native packages. Ubuntu
+24.04 is the Linux baseline; other distributions are not automatically supported.
+The release notes identify platforms that have been tested on a desktop.
 
-## Installation
+## macOS
 
-1. Locate **KnotStudio-0.1.0-macOS-arm64.zip**, the macOS app archive.
-   The separate source-code archive is for developers.
-2. Double-click the ZIP to extract it.
-3. Drag **Knot Studio.app** into **Applications**.
-4. Open the app and choose **Open…** to load a picture. You can use your own image
-   or save one from the [example pictures](EXAMPLES.md).
+1. Extract the **macOS-arm64.zip** download.
+2. Drag **Knot Studio.app** into **Applications**.
+3. Open the app and choose **Open…** to load a picture.
 
-## If macOS blocks opening the app
+### If macOS blocks opening the app
 
-Version 0.1.0 is **not notarized by Apple**. If macOS says it cannot check Knot
-Studio for malicious software or cannot verify its developer, follow the steps
-below only if you trust the source of your copy.
+The default build is **not notarized by Apple**. If macOS says it cannot check
+Knot Studio for malicious software or cannot verify its developer, follow these
+steps only if you trust the source of your copy:
 
-1. Try opening **Knot Studio.app** once.
+1. Try opening the app once.
 2. Open **System Settings → Privacy & Security**.
-3. Find the message about Knot Studio and click **Open Anyway**, then confirm
-   opening it. macOS may ask for your login password.
+3. Find the Knot Studio message and click **Open Anyway**, then confirm.
 
-This creates an exception for this app. Do not disable system-wide security
-protections. For details and the risks of opening an unnotarized app, see
-[Apple's opening instructions](https://support.apple.com/102445).
-On a managed Mac, your administrator may restrict this option.
+This creates an exception for this app. Do not disable system-wide protections.
+See [Apple's instructions](https://support.apple.com/102445).
+A managed Mac may restrict this option. If the warning instead says the app
+**contains malware**, **will damage your computer**, or **is damaged**, report the
+exact message through [Issues](https://github.com/32805433/KnotStudio/issues).
 
-If the warning instead says the app **contains malware**, **will damage your
-computer**, or **is damaged**, report the exact message through
-[Issues](https://github.com/32805433/KnotStudio/issues) before trying to open it.
+## Windows
+
+1. Download the **Windows-x86_64-Setup.exe** installer.
+2. Run it and follow the instructions. Installation is for your user account;
+   administrator access is not normally required.
+3. Open **Knot Studio** from the Start menu.
+
+Alternatively, extract the **Windows-x86_64.zip** portable download and open
+**KnotStudio.exe** inside its folder. Keep the whole folder together: the
+executable needs the accompanying files. No Python or Tesseract installation is
+required. Uninstall an installed copy through **Settings → Apps**.
+
+An unsigned download may show an unknown-publisher warning. If SmartScreen says
+**Windows protected your PC**, use **More info → Run anyway** only when you trust
+the download. If Windows reports detected malware, report the exact message
+instead of disabling protection.
+
+## Linux
+
+1. Extract the **Linux-x86_64.tar.gz** archive into a folder you can write to.
+2. Open **KnotStudio** inside the extracted folder. Keep its accompanying files.
+3. If your file manager asks how to handle it, choose to run it as a program.
+
+The archive preserves executable permissions. If extraction software removes
+them, enable **Allow executing file as program** in the file's properties.
+The package includes Python, Tk and OCR. It needs a desktop session and the
+standard Ubuntu desktop libraries; a headless server is not the target.
+Wayland sessions need XWayland for the Tk interface.
 
 ## Help and updates
 
-- Read the [user guide](USER_GUIDE.md) or choose **Help → User guide** in the app.
-- Get future versions from [Releases](https://github.com/32805433/KnotStudio/releases).
-- Report problems through [Issues](https://github.com/32805433/KnotStudio/issues),
-  including your macOS version and the error message.
-
-Reconstructed diagrams can contain mistakes. Compare the output with the input
-before relying on its crossings, orientations, or PD code.
+Choose **Help → User guide** in the app, or read the [user guide](USER_GUIDE.md).
+Get updates from [Releases](https://github.com/32805433/KnotStudio/releases).
+Replace a portable folder as a whole when upgrading; save diagram files outside
+that folder. Report problems through [Issues](https://github.com/32805433/KnotStudio/issues),
+including the app version, operating system, and exact error message.

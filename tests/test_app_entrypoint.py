@@ -49,7 +49,7 @@ def test_frozen_app_can_launch_when_home_log_directory_is_unwritable(tmp_path, m
     started = []
     monkeypatch.setattr(sys, 'frozen', True, raising=False)
     monkeypatch.setattr(ui, 'main', lambda argv: started.append(argv))
-    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    monkeypatch.setattr(app, 'log_directory', lambda: tmp_path/'Library'/'Logs'/'Knot Studio')
     # A file where the Logs directory should be reproduces a real startup failure.
     (tmp_path/'Library').write_text('not a directory')
     import tempfile

@@ -33,6 +33,8 @@ from .box_alignment import align_twist_boxes
 from .display_cache import DisplayCurveCache
 from .twist_boxes import is_twist_box, parse_twist_label, twist_label
 from .pd_preview import PDPreviewCache, pd_preview_crossings, prepare_compact_pd_preview
+from .desktop_platform import (initial_window_size, open_local_document,
+                               shortcut_accelerator, shortcut_modifiers, wheel_steps)
 
 SAVE_FORMATS = (("Editable diagram JSON", ".json"), ("PD code text", ".txt"),
                 ("TikZ code", ".tex"),
@@ -167,6 +169,7 @@ class ScrollableControls(ttk.Frame):
         self.viewport.bind("<Configure>", self._layout)
         self.event_tag = f"ControlsScroll:{self}"
         self.pointer_focus = None
+        self.wheel_remainder = 0.
         for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
             self.bind_class(self.event_tag, sequence, self._wheel)
         self.precise_scrolling = False
@@ -217,24 +220,19 @@ class ScrollableControls(ttk.Frame):
         return 'break'
 
     def _wheel(self, event):
-        number = getattr(event, "num", None)
-        delta = getattr(event, "delta", 0)
-        if number in (4, 5):
-            steps = -1 if number == 4 else 1
-        elif delta:
-            # Tk 9 normalizes physical wheel notches to 120 on macOS too;
-            # older Aqua Tk used small MouseWheel deltas for its trackpad.
-            legacy_aqua = self.tk.call("tk", "windowingsystem") == "aqua" and not self.precise_scrolling
-            divisor = 1 if legacy_aqua else 120
-            steps = -int(math.copysign(max(1, abs(delta) / divisor), delta))
-        else:
+        steps = -wheel_steps(event, windowing_system=self.tk.call('tk', 'windowingsystem'),
+                             precise_scrolling=self.precise_scrolling)
+        if not steps:
             return
         # Let the PD/Details text scroll internally until it reaches its end.
         if isinstance(event.widget, tk.Text):
             first, last = event.widget.yview()
             if (steps < 0 and first > 0) or (steps > 0 and last < 1):
                 return
-        self.viewport.yview_scroll(24*steps, "units")
+        pixels = 24*steps + self.wheel_remainder
+        whole_pixels = math.trunc(pixels)
+        self.wheel_remainder = pixels - whole_pixels
+        self.viewport.yview_scroll(whole_pixels, "units")
         return "break"
 
     def _show_focus(self, event):
@@ -387,11 +385,10 @@ class DiagramEditor:
         self.root = root
         root.withdraw()
         root.title("Knot Studio · Image to PD")
-        initial_size = (min(1280, max(920, root.winfo_screenwidth() - 80)),
-                        min(840, max(620, root.winfo_screenheight() - 100)))
+        initial_size = initial_window_size(root.winfo_screenwidth(), root.winfo_screenheight())
         self.initial_size = initial_size
         root.geometry(f"{initial_size[0]}x{initial_size[1]}")
-        root.minsize(920, 620)
+        root.minsize(min(920, initial_size[0]), min(620, initial_size[1]))
         self.diagram = None
         self.raster_image = None
         self.raster_changed = False
@@ -660,14 +657,18 @@ class DiagramEditor:
         self.twist_boxes_toggle.configure(text='▾ Twist boxes (experimental)' if self.twist_boxes_expanded else '▸ Twist boxes (experimental)')
 
     def _menu(self):
+        windowing_system = self.root.tk.call('tk', 'windowingsystem')
         menu = tk.Menu(self.root)
         file_menu = tk.Menu(menu, tearoff=False)
-        for label, command in (("Open…", self.open_file), ("New sketch", self.new_sketch), ("Save…", self.save_as)):
-            file_menu.add_command(label=label, command=command)
+        for label, command, key in (("Open…", self.open_file, 'O'), ("New sketch", self.new_sketch, None), ("Save…", self.save_as, 'S')):
+            file_menu.add_command(label=label, command=command,
+                                  accelerator=shortcut_accelerator(key, windowing_system) if key else '')
         menu.add_cascade(label="File", menu=file_menu)
         edit_menu = tk.Menu(menu, tearoff=False)
-        edit_menu.add_command(label="Undo", command=self.undo, accelerator="⌘Z")
-        edit_menu.add_command(label="Redo", command=self.redo, accelerator="⇧⌘Z")
+        edit_menu.add_command(label="Undo", command=self.undo,
+                              accelerator=shortcut_accelerator('Z', windowing_system))
+        edit_menu.add_command(label="Redo", command=self.redo,
+                              accelerator=shortcut_accelerator('Z', windowing_system, shift=True))
         edit_menu.add_separator()
         edit_menu.add_command(label="Add curl (Reidemeister I)…", command=self.start_add_curl)
         edit_menu.add_command(label="Simplify", command=self.start_simplify)
@@ -688,13 +689,15 @@ class DiagramEditor:
         self.root.configure(menu=menu)
 
     def open_user_guide(self):
-        import webbrowser
         from .resources import resource_root
         folder = resource_root()/'docs'
         path = folder/'USER_GUIDE.html'
         if not path.exists():
             path = folder/'USER_GUIDE.md'
-        webbrowser.open(path.resolve().as_uri())
+        try:
+            open_local_document(path)
+        except OSError as exc:
+            messagebox.showerror('Cannot open user guide', str(exc))
 
     def _bindings(self):
         self.canvas.bind("<Configure>", lambda event: self.fit_view() if self.fit_pending else self.redraw())
@@ -710,8 +713,8 @@ class DiagramEditor:
             self.canvas.bind(f"<ButtonRelease-{button}>", self._end_pan)
         self.canvas.bind("<Control-Button-1>", self._start_pan)
         self.canvas.bind("<MouseWheel>", self._wheel)
-        self.canvas.bind("<Button-4>", lambda event: self.zoom(1.12, (event.x, event.y)))
-        self.canvas.bind("<Button-5>", lambda event: self.zoom(1 / 1.12, (event.x, event.y)))
+        self.canvas.bind("<Button-4>", self._wheel)
+        self.canvas.bind("<Button-5>", self._wheel)
         self.canvas.bind("<Key-x>", lambda event: self.switch_selected())
         self.canvas.bind("<Key-r>", lambda event: self.reverse_selected())
         self.canvas.bind("<Delete>", lambda event: self.delete_selected())
@@ -720,11 +723,16 @@ class DiagramEditor:
         for key in ("Shift_L", "Shift_R"):
             self.root.bind(f"<KeyPress-{key}>", lambda event: self._shift_during_drag(event, True), add="+")
             self.root.bind(f"<KeyRelease-{key}>", lambda event: self._shift_during_drag(event, False), add="+")
-        for modifier in ("Control", "Command"):
-            self.root.bind(f"<{modifier}-o>", lambda event: self.open_file())
-            self.root.bind(f"<{modifier}-s>", lambda event: self.save_as())
-            self.root.bind(f"<{modifier}-z>", lambda event: self.undo())
-            self.root.bind(f"<{modifier}-Shift-Z>", lambda event: self.redo())
+        windowing_system = self.root.tk.call('tk', 'windowingsystem')
+        for modifier in shortcut_modifiers(windowing_system):
+            for key, command in (('o', self.open_file), ('s', self.save_as),
+                                 ('z', self.undo), ('Shift-Z', self.redo)):
+                def invoke(event, callback=command):
+                    callback()
+                    return 'break'
+                self.root.bind(f'<{modifier}-{key}>', invoke)
+        if windowing_system != 'aqua':
+            self.root.bind('<Control-y>', lambda event: (self.redo(), 'break')[1])
 
     def _snapshot(self):
         tool = self.tool.get()
@@ -1910,8 +1918,13 @@ class DiagramEditor:
         self.redraw()
 
     def _wheel(self, event):
-        if event.delta:
-            self.zoom(1.1 if event.delta > 0 else 1 / 1.1, (event.x, event.y))
+        windowing_system = self.root.tk.call('tk', 'windowingsystem')
+        steps = wheel_steps(event, windowing_system=windowing_system)
+        if steps:
+            if windowing_system == 'aqua':
+                steps = math.copysign(1, steps)  # Preserve the macOS canvas zoom speed.
+            base = 1.12 if getattr(event, 'num', None) in (4, 5) else 1.1
+            self.zoom(base ** max(-10, min(10, steps)), (event.x, event.y))
         return "break"
 
     def _start_pan(self, event):

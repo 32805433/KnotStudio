@@ -30,7 +30,7 @@ REQUIRED = ('README.md', 'LICENSE', 'pyproject.toml',
             'recognizer/ui.py', 'recognizer/models/label_components_v2.json',
             'recognizer/models/ink_forest_v1.json', 'examples/index.json')
 TEXT_SUFFIXES = {'.py', '.md', '.txt', '.toml', '.json', '.yml', '.yaml',
-                 '.sh', '.command', '.spec', '.html', '.plist'}
+                 '.sh', '.command', '.spec', '.html', '.plist', '.ps1', '.cmd', '.bat', '.iss'}
 
 
 def source_files(root):
@@ -158,7 +158,8 @@ def check_source(root):
         except UnicodeError:
             errors.append(f'{relative}: expected UTF-8 text')
             continue
-        if re.search(r'(?:/Users/|/home/)[A-Za-z0-9_.-]+/', text):
+        if (re.search(r'(?:/Users/|/home/)[A-Za-z0-9_.-]+/', text)
+                or re.search(r'[A-Za-z]:[\\/]Users[\\/][^\\/\s]+[\\/]', text)):
             errors.append(f'{relative}: contains an absolute personal filesystem path')
         if path.suffix == '.py':
             audit_imports(root, path, errors)

@@ -1,8 +1,8 @@
-# Locked for the macOS Python 3.13 release build.
+# Locked for the Python 3.13 desktop release builds.
 numpy==2.5.3
 scipy==1.18.1
 scikit-image==0.26.0
-# The macOS release builder replaces this developer wheel with its minimal source build.
+# The release builder replaces this developer wheel with its minimal source build.
 opencv-python-headless==5.0.0.93
 networkx==3.7
 Pillow==12.3.0

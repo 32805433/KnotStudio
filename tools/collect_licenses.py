@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect installed redistribution notices for a macOS build, without downloads.
+"""Collect installed redistribution notices for a native build, without downloads.
 
 Run with the Python environment used to freeze the app. ``collect(output,
  tesseract=..., tessdata=...)`` writes inventory.json and INVENTORY.txt beside
@@ -141,7 +141,8 @@ def native_dependencies(executable: Path) -> tuple[dict[Path, list[Path]], list[
 
 
 def collect(output: Path, tesseract: Path | None = None, tessdata: Path | None = None,
-            *, strict: bool = True) -> dict[str, Any]:
+            *, strict: bool = True, ocr_root: Path | None = None,
+            runtime_notices: Path | None = None) -> dict[str, Any]:
     """Create a portable license tree and inventories; return the inventory.
 
     ``output`` is a dedicated directory for collected dependency notices.
@@ -202,14 +203,22 @@ def collect(output: Path, tesseract: Path | None = None, tessdata: Path | None =
             entry["scope"] = "Unmodified embedded bootloader, loader, and runtime hooks; retain the bootloader exception."
 
     base = Path(sys.base_prefix)
+    if sys.platform != 'darwin':
+        try:
+            from tools.portable_licenses import collect_runtime
+        except ModuleNotFoundError:
+            from portable_licenses import collect_runtime
+        collect_runtime(base, runtime_notices, component, file, issues)
     py_version = ".".join(map(str, sys.version_info[:3]))
     minor = f"python{sys.version_info.major}.{sys.version_info.minor}"
-    py = component("Python", py_version, "runtime", f"https://www.python.org/downloads/release/python-{py_version.replace('.', '')}/")
-    file(py, base / "lib" / minor / "LICENSE.txt", "runtime/Python/LICENSE.txt", f"lib/{minor}/LICENSE.txt")
+    if sys.platform == 'darwin':
+        py = component("Python", py_version, "runtime", f"https://www.python.org/downloads/release/python-{py_version.replace('.', '')}/")
+        file(py, base / "lib" / minor / "LICENSE.txt", "runtime/Python/LICENSE.txt", f"lib/{minor}/LICENSE.txt")
     # The CPython core license alone omits notices for bundled third-party code.
     doc_rel = "Resources/English.lproj/Documentation/_sources/license.rst.txt"
-    file(py, base / doc_rel, "runtime/Python/bundled-library-notices.rst.txt", doc_rel)
-    for name in ("Tcl", "Tk"):
+    if sys.platform == 'darwin':
+        file(py, base / doc_rel, "runtime/Python/bundled-library-notices.rst.txt", doc_rel)
+    for name in (("Tcl", "Tk") if sys.platform == 'darwin' else ()):
         framework = base / "Frameworks" / f"{name}.framework"
         versions = framework / "Versions"
         candidates = sorted(p for p in versions.glob("*") if p.name != "Current" and p.is_dir())
@@ -230,6 +239,12 @@ def collect(output: Path, tesseract: Path | None = None, tessdata: Path | None =
         tesseract = Path(tesseract)
         if not tesseract.is_file():
             issues.append("Tesseract executable is missing.")
+        elif sys.platform != 'darwin':
+            try:
+                from tools.portable_licenses import collect_native
+            except ModuleNotFoundError:
+                from portable_licenses import collect_native
+            collect_native(tesseract, ocr_root, component, file, issues)
         else:
             groups, native_issues = native_dependencies(tesseract)
             issues.extend(native_issues)
@@ -310,10 +325,14 @@ def main() -> None:
     parser.add_argument("output", type=Path)
     parser.add_argument("--tesseract", type=Path)
     parser.add_argument("--tessdata", type=Path)
+    parser.add_argument("--ocr-root", type=Path)
+    parser.add_argument("--runtime-notices", type=Path)
     parser.add_argument("--allow-incomplete", action="store_true", help="Write flagged evidence for inspection; do not publish it as a complete bundle.")
     args = parser.parse_args()
     try:
-        result = collect(args.output, tesseract=args.tesseract, tessdata=args.tessdata, strict=not args.allow_incomplete)
+        result = collect(args.output, tesseract=args.tesseract, tessdata=args.tessdata,
+                         strict=not args.allow_incomplete, ocr_root=args.ocr_root,
+                         runtime_notices=args.runtime_notices)
     except LicenseCollectionError as exc:
         parser.exit(1, f"{exc}\n")
     print(f"Collected notices for {len(result['components'])} components; {len(result['issues'])} unresolved issues.")

@@ -1,0 +1,52 @@
+name: Prepare release draft
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'New version tag matching pyproject.toml (for example v0.2.0)'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-draft
+  cancel-in-progress: false
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.2'
+      - name: Require a fresh tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: python tools/prepare_release.py --tag "$RELEASE_TAG"
+  builds:
+    needs: preflight
+    uses: ./.github/workflows/desktop.yml
+  draft:
+    needs: builds
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.2'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: KnotStudio-*
+          path: build/artifacts
+      - name: Verify all packages and consolidate checksums
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: python tools/assemble_release.py --artifacts build/artifacts --output dist/release --commit "$SOURCE_COMMIT"
+      - name: Create a draft for desktop review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: python tools/prepare_release.py --tag "$RELEASE_TAG" --assets dist/release

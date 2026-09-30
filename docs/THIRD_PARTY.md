@@ -58,7 +58,7 @@ including only `core`, `imgproc`, and the Python bindings. It excludes the video
 codecs and camera libraries found in some prebuilt OpenCV wheels. The build
 checks the installed modules and native library links before packaging.
 
-PyInstaller packages the macOS app. Its bootloader and runtime hooks have their
+PyInstaller packages the desktop applications. Its bootloader and runtime hooks have their
 own license terms and distribution exception, preserved with the build notices.
 Build-only tools are not necessarily application runtime dependencies.
 

@@ -19,6 +19,8 @@ import numpy as np
 from PIL import Image, ImageOps
 from skimage.morphology import skeletonize
 
+from .desktop_platform import hidden_subprocess_options
+
 
 def _tesseract_executable():
     from .resources import bundled_tesseract
@@ -46,7 +48,8 @@ def _ocr_numeric(crop):
     image.save(stream, format="PNG")
     try:
         result = subprocess.run([executable, "stdin", "stdout", "--psm", "7", "tsv"],
-                                input=stream.getvalue(), capture_output=True, timeout=8, check=True)
+                                input=stream.getvalue(), capture_output=True, timeout=8, check=True,
+                                **hidden_subprocess_options())
     except (OSError, subprocess.SubprocessError):
         return None
     words = [r for r in csv.DictReader(io.StringIO(result.stdout.decode("utf-8")), delimiter="\t")

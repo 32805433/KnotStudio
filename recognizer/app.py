@@ -4,11 +4,13 @@ from pathlib import Path
 import sys
 import traceback
 
+from .desktop_platform import log_directory
+
 
 def _open_log():
     """Logging must not prevent a GUI launch on a restricted home directory."""
     try:
-        directory = Path.home()/'Library'/'Logs'/'Knot Studio'
+        directory = log_directory()
         directory.mkdir(parents=True, exist_ok=True)
         path = directory/'app.log'
         if path.exists() and path.stat().st_size > 2_000_000:

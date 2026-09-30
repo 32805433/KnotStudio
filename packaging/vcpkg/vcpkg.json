@@ -1,0 +1,6 @@
+{
+  "name": "knotstudio-ocr",
+  "version-string": "1",
+  "builtin-baseline": "a42757564758c60651ebc616d9b000b7b91249ef",
+  "dependencies": [{"name": "tesseract", "default-features": false}]
+}

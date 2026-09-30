@@ -1,7 +1,7 @@
 # Security
 
 Knot Studio processes images and diagram files locally. It does not require an
-account or upload images for recognition. The bundled models run on the Mac.
+account or upload images for recognition. The bundled models run on your computer.
 
 Security fixes target the current source version. Older snapshots do not have
 separate maintenance branches. Dependencies that decode images and load native

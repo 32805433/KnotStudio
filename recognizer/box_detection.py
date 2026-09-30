@@ -21,6 +21,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from .text_labels import _tesseract_executable
+from .desktop_platform import hidden_subprocess_options
 
 
 def parse_twist_value(text):
@@ -176,7 +177,7 @@ def _ocr_one(mask, executable, psm, timeout):
     try:
         result = subprocess.run([executable, 'stdin', 'stdout', '--psm', str(psm), 'tsv'],
                                 input=stream.getvalue(), capture_output=True, check=True,
-                                timeout=max(.05, timeout))
+                                timeout=max(.05, timeout), **hidden_subprocess_options())
         words = [row for row in csv.DictReader(io.StringIO(result.stdout.decode()), delimiter='\t')
                  if row.get('level') == '5' and row.get('text', '').strip()]
         if not words:

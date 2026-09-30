@@ -1,4 +1,4 @@
-"""Offline checks for a relocated source checkout or frozen macOS application.
+"""Offline checks for a relocated source checkout or frozen desktop application.
 
 This is independent of pytest and development fixtures, so the packaged
 executable can exercise its own runtime resources and bundled examples.
@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import hashlib
 import json
+import math
 from pathlib import Path
 import platform
 import subprocess
@@ -150,6 +151,7 @@ def _ocr():
     import numpy as np
     from PIL import Image
     from .text_labels import _tesseract_executable
+    from .desktop_platform import hidden_subprocess_options
     executable = _tesseract_executable()
     assert executable, 'Tesseract OCR executable is missing'
     if getattr(sys, 'frozen', False):
@@ -161,7 +163,8 @@ def _ocr():
     Image.fromarray(rgb).save(stream, format='PNG')
     process = subprocess.run([str(executable), 'stdin', 'stdout', '--psm', '7',
                               '-c', 'tessedit_char_whitelist=-0123456789'],
-                             input=stream.getvalue(), capture_output=True, timeout=12, check=True)
+                             input=stream.getvalue(), capture_output=True, timeout=12, check=True,
+                             **hidden_subprocess_options())
     reading = ''.join(process.stdout.decode('utf-8').split())
     assert reading == '-2', f'OCR expected -2, received {reading!r}'
     return 'OCR subprocess read a synthetic negative coefficient using the available runtime.'
@@ -182,6 +185,7 @@ def _gui():
     from .diagram import pd_code, validate
     from .projection_equivalence import same_pd_projection
     from .resources import example_entries, example_path
+    from .desktop_platform import shortcut_modifiers
 
     dialogs = ('showerror', 'showwarning', 'showinfo', 'askyesno', 'askokcancel')
     original_dialogs = {name: getattr(ui.messagebox, name) for name in dialogs}
@@ -214,6 +218,17 @@ def _gui():
         editor = ui.DiagramEditor(root)
         assert not editor.smooth_display.get(), 'Smooth display should start off'
         pump_until(lambda: editor.canvas.winfo_width() > 1)
+        windowing_system = str(root.tk.call('tk', 'windowingsystem'))
+        tk_scaling = float(root.tk.call('tk', 'scaling'))
+        assert math.isfinite(tk_scaling) and tk_scaling > 0, 'Invalid native display scaling'
+        # Tk reports logical display dimensions on high-DPI desktops. Avoid
+        # assumptions about a physical resolution or native title-bar height.
+        screen = (root.winfo_screenwidth(), root.winfo_screenheight())
+        assert all(0 < actual <= available for actual, available in zip(editor.initial_size, screen)), \
+            f'Initial editor size {editor.initial_size} exceeds logical screen {screen}'
+        assert all(minimum <= available for minimum, available in zip(root.minsize(), screen)), \
+            'Minimum editor size makes controls unreachable on the logical display'
+        assert editor.canvas.winfo_height() > 1 and editor.controls.viewport.winfo_height() > 1
         assert editor.recognize_button.instate(['disabled'])
         assert editor.convert_button.instate(['disabled'])
 
@@ -250,6 +265,48 @@ def _gui():
                        for actual, expected in zip(editor.offset, expected_offset)), press
             assert editor.diagram == pan_original and len(editor.history) == pan_history
             assert editor.drag is None
+
+        # Exercise the wheel events Tk actually receives on this desktop.
+        # X11 uses button events; Windows and Aqua use signed wheel deltas.
+        # Aqua Tk 8 reports small trackpad deltas, while Tk 9 uses 120/notch.
+        if windowing_system == 'x11':
+            wheel_events = (('<Button-4>', {}), ('<Button-5>', {}))
+        else:
+            delta = 1 if windowing_system == 'aqua' and not editor.controls.precise_scrolling else 120
+            wheel_events = (('<MouseWheel>', {'delta': delta}),
+                            ('<MouseWheel>', {'delta': -delta}))
+        anchor = (editor.canvas.winfo_width() // 2, editor.canvas.winfo_height() // 2)
+        editor.fit_view()
+        # Fit can legitimately exceed the maximum interactive zoom on tiny
+        # diagrams. Choose a supported scale before testing both directions.
+        if editor.scale > 4:
+            editor.zoom(4 / editor.scale, anchor)
+        for (sequence, options), direction in zip(wheel_events, (1, -1)):
+            before_scale = editor.scale
+            model_anchor = editor.to_model(*anchor)
+            editor.canvas.event_generate(sequence, x=anchor[0], y=anchor[1], **options)
+            pump_until(lambda: editor.scale != before_scale)
+            assert (editor.scale - before_scale) * direction > 0, 'Wheel zoom went in the wrong direction'
+            assert all(math.isclose(actual, expected, abs_tol=1e-8)
+                       for actual, expected in zip(editor.to_model(*anchor), model_anchor)), \
+                'Wheel zoom moved the point beneath the pointer'
+            assert editor.diagram == pan_original and len(editor.history) == pan_history
+        unchanged_scale = editor.scale
+        editor.canvas.event_generate('<MouseWheel>', x=anchor[0], y=anchor[1], delta=0)
+        pump_until(lambda: True)
+        assert editor.scale == unchanged_scale, 'A zero wheel delta changed the zoom'
+
+        editor.controls.viewport.yview_moveto(0)
+        pump_until(lambda: True)
+        first, last = editor.controls.viewport.yview()
+        if last < 1:
+            # Dispatch over a child control to check its custom bindtag, not
+            # merely the sidebar canvas. Short/high-DPI windows need this.
+            sequence, options = wheel_events[1]
+            editor.recognize_button.event_generate(sequence, **options)
+            pump_until(lambda: editor.controls.viewport.yview()[0] > first)
+            assert editor.scale == unchanged_scale, 'Sidebar wheel unexpectedly zoomed the drawing'
+        editor.controls.viewport.yview_moveto(0)
         assert 'PD' in editor.pd_text.get('1.0', 'end') or '[' in editor.pd_text.get('1.0', 'end')
 
         # Automatic recognition must retain the original pixels, just like
@@ -270,8 +327,20 @@ def _gui():
         editor.selected_crossing = ident
         editor.switch_selected()
         assert next(c for c in editor.diagram['crossings'] if c['id'] == ident)['over'] != over
+        # Test the platform's primary shortcuts through Tk's binding dispatch,
+        # including a child canvas target and a real reversible diagram edit.
+        editor.canvas.focus_force()
+        pump_until(lambda: root.focus_get() is editor.canvas)
+        modifier = shortcut_modifiers(windowing_system)[0]
+        editor.canvas.event_generate(f'<{modifier}-KeyPress-z>')
+        pump_until(lambda: next(c for c in editor.diagram['crossings'] if c['id'] == ident)['over'] == over)
+        editor.canvas.event_generate(f'<{modifier}-Shift-KeyPress-Z>')
+        pump_until(lambda: next(c for c in editor.diagram['crossings'] if c['id'] == ident)['over'] != over)
         editor.undo()
-        assert next(c for c in editor.diagram['crossings'] if c['id'] == ident)['over'] == over
+        if windowing_system != 'aqua':
+            editor.canvas.event_generate('<Control-KeyPress-y>')
+            pump_until(lambda: next(c for c in editor.diagram['crossings'] if c['id'] == ident)['over'] != over)
+            editor.undo()
         assert same_pd_projection(expected_pd, pd_code(editor.diagram))
         before = copy.deepcopy(editor.diagram)
         editor.selected_component = editor.diagram['edges'][0]['component']
@@ -281,7 +350,10 @@ def _gui():
         assert editor.diagram == before
 
         with tempfile.TemporaryDirectory(prefix='knot-studio-gui-') as directory:
-            directory = Path(directory)
+            # Saving, reopening, and exporting must tolerate spaces and Unicode
+            # on Windows, just as they do on macOS and Linux.
+            directory = Path(directory) / 'Portable paths Ω 结'
+            directory.mkdir()
             saved_json, saved_png = directory/'saved diagram.json', directory/'saved image.png'
             editor.save_json(str(saved_json))
             assert saved_json.is_file(), 'Editor did not save JSON'
@@ -294,15 +366,15 @@ def _gui():
                 assert image.convert('L').getextrema()[0] < 200, 'Exported image contains no visible drawing'
             saved_svg, saved_tex = directory/'saved image.svg', directory/'saved diagram.tex'
             editor.export_image(str(saved_svg))
-            assert '<svg' in saved_svg.read_text()
+            assert '<svg' in saved_svg.read_text(encoding='utf-8')
             editor.save_tikz(str(saved_tex))
             pump_until(saved_tex.is_file)
-            assert '\\end{tikzpicture}' in saved_tex.read_text()
-            assert '.. controls' not in saved_tex.read_text()
+            assert '\\end{tikzpicture}' in saved_tex.read_text(encoding='utf-8')
+            assert '.. controls' not in saved_tex.read_text(encoding='utf-8')
             editor.smooth_display.set(True)
             editor._appearance_changed()
             editor.save_tikz(str(saved_tex))
-            pump_until(lambda: '.. controls' in saved_tex.read_text())
+            pump_until(lambda: '.. controls' in saved_tex.read_text(encoding='utf-8'))
             # The checkbox controls the live preview and saved TikZ, including
             # when a cached smooth fit already exists.
             editor.code_notebook.select(editor.tikz_frame)
@@ -312,7 +384,7 @@ def _gui():
                        and '.. controls' not in editor.tikz_text.get('1.0', 'end'))
             raw_tex = directory/'unsmoothed.tex'
             editor.save_tikz(str(raw_tex))
-            assert raw_tex.is_file() and '.. controls' not in raw_tex.read_text()
+            assert raw_tex.is_file() and '.. controls' not in raw_tex.read_text(encoding='utf-8')
             editor.smooth_display.set(True)
             editor._appearance_changed()
             pump_until(lambda: '.. controls' in editor.tikz_text.get('1.0', 'end'))
@@ -320,7 +392,7 @@ def _gui():
             # Broken metadata must be rejected before replacing a good open
             # diagram. Optional null metadata in older files remains usable.
             broken = directory/'bad metadata.json'
-            broken.write_text(json.dumps(dict(saved, diagnostics=['invalid'])))
+            broken.write_text(json.dumps(dict(saved, diagnostics=['invalid'])), encoding='utf-8')
             errors = []
             ui.messagebox.showerror = lambda *args, **kw: errors.append(args)
             unchanged = editor.diagram
@@ -330,7 +402,7 @@ def _gui():
                 ui.messagebox.showerror = reject_dialog
             assert errors and editor.diagram is unchanged
             old_json = directory/'older metadata.json'
-            old_json.write_text(json.dumps(dict(saved, warnings=None, diagnostics=None)))
+            old_json.write_text(json.dumps(dict(saved, warnings=None, diagnostics=None)), encoding='utf-8')
             editor.open_json(old_json)
             assert same_pd_projection(expected_pd, pd_code(editor.diagram))
             assert editor.result['warnings'] == [] and editor.result['diagnostics'] == {}
@@ -385,9 +457,11 @@ def _gui():
         # Finish any small display-fitting worker before destroying its UI.
         pump_until(lambda: not any(t.is_alive() for t in threading.enumerate()
                                    if t not in existing_threads), seconds=10.)
-        return (f'Tk {root.tk.call("info", "patchlevel")}: real editor opened a bundled trefoil, '
+        return (f'Tk {root.tk.call("info", "patchlevel")} ({windowing_system}, scaling {tk_scaling:.3f}): '
+                'native wheel zoom, sidebar scrolling, pan, and Undo/Redo shortcuts verified. '
+                'The real editor opened a bundled trefoil, '
                 'recognized its reference PD, restored source pixels with Undo/Redo, switched '
-                'a crossing and orientation, saved/reopened JSON, exported PNG/SVG/TikZ, and '
+                'a crossing and orientation, saved/reopened JSON in a Unicode path, exported PNG/SVG/TikZ, and '
                 'preserved PD through drawing conversion and energy relaxation. Invalid imports, '
                 'immediate Stop, late worker results, Undo, and button states verified.')
     finally:

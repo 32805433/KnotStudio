@@ -15,7 +15,7 @@ NumPy, SciPy, scikit-image, OpenCV headless, NetworkX, and Pillow. Their transit
 dependencies and native libraries are included by the application build.
 Node.js and Java are not runtime requirements.
 
-The macOS release build uses Python 3.13 and the exact versions recorded in
+The desktop release builds use Python 3.13 and the exact versions recorded in
 `requirements-runtime.txt` and `requirements-build.txt`. Install the latter for
 release builds; the broader package requirements support source installation.
 
@@ -26,7 +26,7 @@ release builds; the broader package requirements support source installation.
 | `examples/` | A small collection for exploring features, with provenance records |
 | `docs/` | User and developer documentation |
 | `licenses/` | Preserved third-party license notices |
-| `tools/` and `packaging/` | Standalone macOS build support |
+| `tools/` and `packaging/` | Shared native desktop build and release support |
 
 Models are local package data. Recognition needs neither a download nor a
 remote model service. Example names and saved example outputs are not inputs to
@@ -128,10 +128,24 @@ follow the component-color and orientation-arrow checkboxes.
 The release source contains a focused test suite using synthetic and bundled
 inputs. Run `python -m pytest` after installing the `test` extra. Add meaningful
 regressions for changed behavior and check new UI interactions in native Tk;
-test doubles do not establish that a macOS control works visually.
+test doubles do not establish that a desktop control works visually.
 
 Keep recovery based on source pixels, finite search budgets, and explicit
 uncertainty. Keep topology changes separate from layout changes. Preserve graph
 incidence, orientation, and compact-box semantics through edits. Rendering must
 not change topology. A geometry operation's rejection is not a mathematical
 impossibility proof, and a valid reconstruction is not an accuracy certificate.
+
+## Platform integration and releases
+
+`desktop_platform.py` owns native shortcuts, wheel-event normalization, log paths,
+external help launching, and OCR subprocess options. Recognition and editing use
+the same code and JSON format on all platforms. Bundled Tesseract is resolved by
+`resources.py`; users do not install a separate OCR runtime.
+
+`tools/build_desktop.py` packages each operating system from the same source.
+Windows uses a per-user installer and portable ZIP; Linux uses a relocatable
+archive; macOS retains its app bundle. `tools/verify_desktop.py` and the macOS
+verifier run the packaged self-test from a separate directory with an isolated
+search path. Native dependencies, notices, source commit, and platform targets are
+recorded with the build. See [desktop build and release](BUILDING_DESKTOP.md).

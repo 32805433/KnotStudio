@@ -18,6 +18,7 @@ from skimage.morphology import skeletonize
 
 from .knotfolio_backend import _adjacency, _prune_spurs
 from .text_labels import _tesseract_executable
+from .desktop_platform import hidden_subprocess_options
 
 
 def _ocr_label(crop):
@@ -36,7 +37,7 @@ def _ocr_label(crop):
             try:
                 result = subprocess.run([executable, 'stdin', 'stdout', '--psm', mode, 'tsv'],
                                         input=stream.getvalue(), capture_output=True,
-                                        check=True, timeout=2)
+                                        check=True, timeout=2, **hidden_subprocess_options())
                 words = [r for r in csv.DictReader(io.StringIO(result.stdout.decode()), delimiter='\t')
                          if r.get('level') == '5' and r.get('text', '').strip()]
                 if len(words) != 1:

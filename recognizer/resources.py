@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import sys
 
+from .desktop_platform import executable_name
+
 
 def resource_root():
     if getattr(sys, 'frozen', False):
@@ -18,7 +20,7 @@ def resource_root():
 
 
 def bundled_tesseract():
-    executable = resource_root()/'ocr'/'bin'/'tesseract'
+    executable = resource_root()/'ocr'/'bin'/executable_name('tesseract')
     if executable.is_file():
         os.environ['TESSDATA_PREFIX'] = str(resource_root()/'ocr'/'tessdata')
         return str(executable)

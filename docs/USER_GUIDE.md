@@ -26,7 +26,7 @@ picture again.
 
 ## Open, review, and recognize
 
-1. Choose **Open…** or press Command+O. A picture opens in drawing mode; an
+1. Choose **Open…** or press Command+O on Mac or Ctrl+O on Windows/Linux. A picture opens in drawing mode; an
    editable JSON file opens in diagram mode.
 2. If possible labels or twist boxes are found, the app marks them and waits
    for you. Ordinary labels appear in amber; boxes appear in blue or orange.
@@ -141,7 +141,7 @@ Diagram edits update PD code automatically; you do not need to recognize again.
 | Switch a crossing | **Switch crossing**, or select it and press **X** |
 | Reverse a component direction | **Reverse orientation**, or select a strand and press **R** |
 | Delete a component | **Delete component**, or select a strand and press Delete/Backspace |
-| Undo or redo | **Undo / Redo**, or Command+Z and Shift+Command+Z |
+| Undo or redo | **Undo / Redo**, or Command+Z and Shift+Command+Z on Mac; Ctrl+Z and Ctrl+Shift+Z (or Ctrl+Y) on Windows/Linux |
 
 Switching crossings and deleting components can change the link type. Component
 deletion is unavailable while twist boxes are present.
@@ -208,7 +208,7 @@ later editing.
 
 To smooth the whole visible canvas, enable **Full screen region (visible diagram
 area)** before clicking **Minimize energy…**. This refers to the area you can see
-in the canvas, not macOS fullscreen mode. Choose **Fit** first to include the
+in the canvas, not operating-system fullscreen mode. Choose **Fit** first to include the
 entire diagram.
 
 Strands outside the boundary and a narrow margin around it stay fixed. Twist
@@ -226,7 +226,7 @@ more detail.
 
 ## Save and export
 
-Once you have a diagram, choose **Save…** or press Command+S and select a
+Once you have a diagram, choose **Save…** or press Command+S on Mac or Ctrl+S on Windows/Linux and select a
 format. Choose **Editable diagram JSON** to reopen the diagram and continue
 editing later. An unrecognized drawing cannot yet be saved from the app;
 recognize it first.

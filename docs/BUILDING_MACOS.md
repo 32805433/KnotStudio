@@ -1,10 +1,13 @@
 # Build and release for macOS
 
+For the shared build workflow and release process, see
+[Desktop builds and releases](BUILDING_DESKTOP.md).
+
 The build creates a movable **Knot Studio.app** with its own Python, Tcl/Tk,
 scientific libraries, local models, numeric OCR, documentation, and examples.
 The built app does not need a source checkout, Homebrew, or an installed Python.
 
-The v0.1.0 build configuration targets **macOS 15.7.5 or later**. The locally
+The v0.2.0 build configuration targets **macOS 15.7.5 or later**. The locally
 verified application uses **Apple silicon (arm64)**. The build uses the current
 Python interpreter's native architecture. To prepare an Intel version, build
 on an Intel environment with matching Python and native dependencies and test
@@ -56,10 +59,10 @@ blocked by Gatekeeper. Include the [installation guide](INSTALLING.md) and
 disclose the signing status when sharing an app. The signing and notarization
 steps below provide Apple's standard distribution path.
 
-For version 0.1.0 on Apple silicon, the app is written to
+For version 0.2.0 on Apple silicon, the app is written to
 `dist/Knot Studio.app` and the app archive to
-`dist/KnotStudio-0.1.0-macOS-arm64.zip`. Matching source is written to
-`dist/KnotStudio-0.1.0-source.zip` and is also included inside the macOS archive.
+`dist/KnotStudio-0.2.0-macOS-arm64.zip`. Matching source is written to
+`dist/KnotStudio-0.2.0-source.zip` and is also included inside the macOS archive.
 `dist/SHA256SUMS.txt` records both archive checksums. Build output stays outside
 the repository's tracked files.
 
@@ -83,21 +86,14 @@ the application.
 
 ## Continuous integration
 
-The macOS workflow builds separate native artifacts on `macos-15` for arm64 and
-`macos-15-intel` for x86_64. Each job installs the official Python 3.13.2 framework
-(including Tk) and Homebrew Tesseract, then installs `requirements-build.txt` and
-runs the build script.
-It uploads the archives, checksums, and verification report as workflow artifacts.
+The desktop workflow (`.github/workflows/desktop.yml`) builds macOS ARM64,
+Windows x86-64 and Ubuntu x86-64 packages from the same source. The macOS job uses
+the official Python 3.13.2 framework with Tk and Homebrew Tesseract. It runs
+packaged GUI checks as well as the runtime and dependency checks.
 
-The workflow is defined in `.github/workflows/macos.yml`. When GitHub Actions
-is enabled, it runs on pushes to `main`, on pull requests, and
-when started manually. Its checks cover tests and the packaged runtime; the
-workflow does not run the optional desktop GUI check. Test interactive use
-separately on each target architecture.
-
-CI artifacts use ad-hoc signing and are not notarized public releases. Workflow
-builds do not publish or replace GitHub Releases; release uploads are a separate
-step.
+The workflow does not publish downloads. The separate draft-release workflow
+validates every platform, then prepares a new draft for desktop review. Default
+Mac artifacts use ad-hoc signing and are not notarized.
 
 ## Sign and notarize a public release
 
