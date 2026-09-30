@@ -47,6 +47,26 @@ def source_commit():
         return os.environ.get('GITHUB_SHA', 'unversioned-source')
 
 
+def source_dirty():
+    """Distinguish an exact checkout build from a local source modification."""
+    from tools.check_release import IGNORED
+    try:
+        tracked = subprocess.check_output(['git', 'diff', '--name-only', '-z', 'HEAD'], cwd=ROOT)
+        untracked = subprocess.check_output(
+            ['git', 'ls-files', '--others', '--exclude-standard', '-z'], cwd=ROOT)
+    except (OSError, subprocess.CalledProcessError):
+        return True
+    for name in (tracked + untracked).decode('utf-8', errors='surrogateescape').split('\0'):
+        if not name:
+            continue
+        path = Path(name)
+        if path.name != '.DS_Store' and not any(
+                part in IGNORED or part.endswith('.egg-info') or part.startswith('.venv-')
+                for part in path.parts):
+            return True
+    return False
+
+
 def find_tessdata(tesseract: Path):
     candidates = [tesseract.parent / 'tessdata', tesseract.parent.parent / 'share' / 'tessdata',
                   Path('/opt/homebrew/share/tessdata'), Path('/usr/local/share/tessdata'),
@@ -73,7 +93,8 @@ def installation_text(version, target, arch, notarized=False):
         'Windows': ('Extract the entire ZIP, then open KnotStudio/KnotStudio.exe.\n'
                     'Keep the _internal folder beside the executable.\n'
                     'Alternatively, run the Setup.exe installer for a per-user installation.\n'
-                    'Requires Windows 10 or Windows 11, 64-bit Intel/AMD.\n'
+                    'Targets Windows 11, 64-bit Intel/AMD.\n'
+                    'Windows 10 22H2 compatibility is a target; manual validation is pending.\n'
                     'An unsigned download may show a Windows SmartScreen prompt.\n'),
         'Linux': ('Extract the archive and open KnotStudio/launch.sh.\n'
                   'Run KnotStudio/install-desktop-entry.sh to add a desktop menu icon.\n'
@@ -93,6 +114,29 @@ def linux_launchers(app):
         shutil.copy2(ROOT / 'packaging' / 'linux' / name, app / name)
         (app / name).chmod(0o755)
     shutil.copy2(ROOT / '.build-assets' / 'KnotStudio.png', app / 'KnotStudio.png')
+
+
+def relocate_linux_libraries(app):
+    """Remove build-interpreter RPATHs while preserving wheel-relative paths."""
+    patcher = shutil.which('patchelf')
+    if not patcher:
+        raise RuntimeError('Install patchelf on the Linux build machine to relocate native libraries.')
+    internal = app / '_internal'
+    for candidate in app.rglob('*'):
+        if candidate.is_symlink() or not candidate.is_file():
+            continue
+        with candidate.open('rb') as stream:
+            if stream.read(4) != b'\x7fELF':
+                continue
+        original = subprocess.check_output([patcher, '--print-rpath', str(candidate)], text=True).strip()
+        paths = [part for part in original.split(':') if part.startswith(('$ORIGIN', '${ORIGIN}'))]
+        # setup-python embeds its hosted-toolcache directory into libpython
+        # and extension RPATHs. The packaged interpreter must not use it.
+        relative = os.path.relpath(internal, candidate.parent).replace(os.sep, '/')
+        paths += ['$ORIGIN', '$ORIGIN/' + relative]
+        updated = ':'.join(dict.fromkeys(paths))
+        if updated != original:
+            subprocess.run([patcher, '--set-rpath', updated, str(candidate)], check=True)
 
 
 def build_installer(version, app):
@@ -155,6 +199,9 @@ def main(argv=None):
     if assets.exists():
         shutil.rmtree(assets)
     assets.mkdir()
+    if target == 'Windows' and not os.environ.get('VCPKG_COMMIT'):
+        manifest = json.loads((ROOT / 'packaging' / 'vcpkg' / 'vcpkg.json').read_text(encoding='utf-8'))
+        os.environ['VCPKG_COMMIT'] = manifest['builtin-baseline']
     from tools.collect_licenses import collect
     collect(assets / 'licenses' / 'dependencies', tesseract=tesseract,
             tessdata=tessdata, ocr_root=args.ocr_root,
@@ -165,11 +212,12 @@ def main(argv=None):
     for extension in ('.icns', '.ico', '.png'):
         create(assets / ('KnotStudio' + extension))
     version = project_version()
-    build_info = {'version': version, 'source_commit': source_commit(), 'platform': target,
+    build_info = {'version': version, 'source_commit': source_commit(), 'source_dirty': source_dirty(), 'platform': target,
                   'architecture': arch, 'python': platform.python_version(),
                   'build_os': platform.platform(),
                   'minimum_macos': '15.7.5' if target == 'macOS' else None,
-                  'minimum_windows': '10 (x64)' if target == 'Windows' else None,
+                  'minimum_windows': '10 22H2 x64 (compatibility target)' if target == 'Windows' else None,
+                  'target_windows': '11 x64' if target == 'Windows' else None,
                   'minimum_linux': 'Ubuntu 24.04 x86_64; glibc 2.39' if target == 'Linux' else None,
                   'signing': ('Developer ID' if args.codesign_identity else 'ad-hoc') if target == 'macOS' else 'unsigned',
                   'notarization_requested': bool(args.notary_profile)}
@@ -187,6 +235,7 @@ def main(argv=None):
     shutil.copy2(assets / 'build-info.json', dist / 'build-info.json')
     if target == 'Linux':
         linux_launchers(app)
+        relocate_linux_libraries(app)
     from tools.verify_desktop import verify, verify_installer
     result = verify(app, dist / 'verification.json', gui=args.gui_test)
     source = source_archive(version)

@@ -5,7 +5,7 @@ crossings, and save your work.
 
 ## Open the app
 
-Follow the [installation guide](INSTALLING.md), then open **Knot Studio.app**.
+Follow the [installation guide](INSTALLING.md), then open **Knot Studio**.
 Choose **Open…** to load a picture or a saved diagram. Supported pictures include
 PNG, JPEG, WebP, TIFF, and BMP; save a PDF page as an image first. You can return
 to this page through **Help → User guide**.
@@ -266,8 +266,13 @@ still be saved.
 
 If the app will not open, see [Installation](INSTALLING.md). For an error report,
 include the message and, if possible, a picture or saved diagram that reproduces
-it. The app log is at `~/Library/Logs/Knot Studio/app.log`; remove private file
-paths before sharing it.
+it. The app log is saved at:
+
+- macOS: `~/Library/Logs/Knot Studio/app.log`
+- Windows: `%LOCALAPPDATA%\Knot Studio\Logs\app.log`
+- Linux: `~/.local/state/knot-studio/logs/app.log` (or under `XDG_STATE_HOME`, if set)
+
+Remove private file paths before sharing the log.
 
 - [Example pictures and their sources](EXAMPLES.md)
 - [Twist boxes](TWIST_BOXES.md)

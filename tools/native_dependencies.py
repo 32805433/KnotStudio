@@ -60,7 +60,7 @@ def windows_imports(binary: Path) -> list[str]:
 
 def windows_dependencies(executable: Path, extra_dirs=()) -> tuple[list[Path], list[str]]:
     """Resolve DLL imports recursively, keeping every non-system dependency."""
-    from PyInstaller.depend.bindepend import get_imports
+    from PyInstaller.depend.bindepend import get_imports, resolve_library_path
     search = [str(executable.parent), *map(str, extra_dirs)]
     queue, found, errors = [executable.resolve()], set(), []
     while queue:
@@ -68,7 +68,13 @@ def windows_dependencies(executable: Path, extra_dirs=()) -> tuple[list[Path], l
         if binary in found:
             continue
         found.add(binary)
-        for name, location in get_imports(str(binary), search_paths=search):
+        imports = dict(get_imports(str(binary), search_paths=search))
+        # PyInstaller inspects regular imports and forwarded exports. Include
+        # delay-loaded DLLs too, matching the release verifier's PE audit.
+        for name in windows_imports(binary):
+            if name not in imports:
+                imports[name] = resolve_library_path(name, [str(binary.parent), *search])
+        for name, location in imports.items():
             resolved = Path(location) if location else None
             if windows_system_library(name, resolved):
                 continue

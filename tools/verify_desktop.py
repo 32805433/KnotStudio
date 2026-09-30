@@ -114,7 +114,7 @@ def verify(app: Path, output: Path, gui=False):
             info_path = app / 'Contents' / 'Frameworks' / 'build-info.json'
         if info_path.is_file():
             info = json.loads(info_path.read_text(encoding='utf-8'))
-            result.update({k: info[k] for k in ('version', 'source_commit', 'platform', 'architecture')})
+            result.update({k: info.get(k) for k in ('version', 'source_commit', 'source_dirty', 'platform', 'architecture')})
             output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
         return result
     errors, count, runtime = [], 0, {'ok': False}
@@ -126,6 +126,8 @@ def verify(app: Path, output: Path, gui=False):
         shutil.copytree(app, relocated, symlinks=True)
         count, errors = inspect_native(relocated)
         executable = relocated / ('KnotStudio.exe' if sys.platform == 'win32' else 'KnotStudio')
+        if sys.platform.startswith('linux') and (relocated / 'launch.sh').is_file():
+            executable = relocated / 'launch.sh'
         try:
             runtime = self_test(executable, temporary, gui=gui)
             if not runtime.get('ok'):
@@ -135,7 +137,7 @@ def verify(app: Path, output: Path, gui=False):
     result = {'ok': not errors and runtime.get('ok', False),
               'native_libraries_checked': count, 'external_dependencies': errors,
               'relocated_self_test': runtime, 'isolated_path': True, 'gui_requested': gui,
-              **{key: info.get(key) for key in ('version', 'source_commit', 'platform', 'architecture')}}
+              **{key: info.get(key) for key in ('version', 'source_commit', 'source_dirty', 'platform', 'architecture')}}
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     if not result['ok']:

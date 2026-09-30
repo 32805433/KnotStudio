@@ -55,7 +55,7 @@ def cmake_flags(system=None, architecture=None):
                   f'-DCMAKE_OSX_ARCHITECTURES={architecture}']
     elif system == 'win32':
         # The official Python interpreter uses the dynamic MSVC runtime.
-        flags += ['-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL']
+        flags += ['-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL', '-DBUILD_WITH_STATIC_CRT=OFF']
     elif not system.startswith('linux'):
         raise ValueError(f'Unsupported build platform: {system}')
     return flags
@@ -102,7 +102,9 @@ for extension in extensions if sys.platform == 'darwin' else []:
     for line in links.splitlines()[1:]:
         target = line.strip().split(' (')[0]
         assert target.startswith(('/usr/lib/', '/System/Library/')), target
-print(json.dumps({'version':cv2.__version__, 'modules':marker['modules'], 'external_libraries':False}))
+print(json.dumps({'version':cv2.__version__, 'modules':marker['modules'],
+                  'native_link_check': 'system libraries only' if sys.platform == 'darwin'
+                  else 'checked by final packaged application verification'}))
 ''' % SOURCE_SHA256
     run([sys.executable, '-c', code], cwd=ROOT)
 
@@ -139,7 +141,7 @@ def build(install=True, jobs=None):
         # OpenCV 5's typing generator assumes every optional module is present.
         # Restrict its refinements to symbols compiled in this minimal build.
         refinement = source/'opencv/modules/python/src2/typing_stubs_generation/api_refinement.py'
-        text = refinement.read_text()
+        text = refinement.read_text(encoding='utf-8')
         before = '    for symbol_name, refine_symbol in NODES_TO_REFINE.items():\n        refine_symbol(root, symbol_name)'
         after = ('    # Knot Studio minimal-build patch: optional modules may be absent.\n'
                  '    from .ast_utils import ScopeNotFoundError, SymbolNotFoundError\n'
@@ -150,11 +152,11 @@ def build(install=True, jobs=None):
                  '            continue\n'
                  '        refine_symbol(root, symbol_name)')
         if before in text:
-            refinement.write_text(text.replace(before, after, 1))
+            refinement.write_text(text.replace(before, after, 1), encoding='utf-8')
         elif after not in text:
             raise RuntimeError('OpenCV typing patch no longer applies')
         generation = source/'opencv/modules/python/src2/typing_stubs_generation/generation.py'
-        text = generation.read_text()
+        text = generation.read_text(encoding='utf-8')
         before = '        node.resolve(root)\n        if isinstance(node, AliasTypeNode):'
         after = ('        # Knot Studio minimal-build patch: no aliases for absent classes.\n'
                  '        from .nodes.type_node import TypeResolutionError\n'
@@ -164,13 +166,15 @@ def build(install=True, jobs=None):
                  '            continue\n'
                  '        if isinstance(node, AliasTypeNode):')
         if before in text:
-            generation.write_text(text.replace(before, after, 1))
+            generation.write_text(text.replace(before, after, 1), encoding='utf-8')
         elif after not in text:
             raise RuntimeError('OpenCV alias patch no longer applies')
         env = dict(os.environ)
         env.update(ENABLE_HEADLESS='1', ENABLE_CONTRIB='0', CMAKE_ARGS=' '.join(flags),
                    CMAKE_BUILD_PARALLEL_LEVEL=str(jobs or min(os.cpu_count() or 2, 8)),
-                   CMAKE_GENERATOR='Ninja',
+                   # Upstream setup.py sets CMAKE_GENERATOR_PLATFORM=x64 on
+                   # Windows, which is incompatible with the Ninja generator.
+                   CMAKE_GENERATOR='Visual Studio 17 2022' if sys.platform == 'win32' else 'Ninja',
                    PATH=str(Path(sys.executable).parent)+os.pathsep+os.environ.get('PATH',''))
         if sys.platform == 'darwin':
             env['MACOSX_DEPLOYMENT_TARGET'] = '15.0'
@@ -194,7 +198,7 @@ def build(install=True, jobs=None):
             for file in sorted((source/'opencv'/relative).rglob('*')):
                 if file.suffix not in {'.cpp','.c','.hpp','.h'}:
                     continue
-                content = file.read_text(errors='replace')
+                content = file.read_text(encoding='utf-8', errors='replace')
                 for match in re.finditer(r'/\*.*?\*/', content[:16000], re.S):
                     block = match.group()
                     if ('copyright' in block.lower() and
@@ -202,7 +206,7 @@ def build(install=True, jobs=None):
                         and block not in seen):
                         seen.add(block)
                         sections.append(file.relative_to(source/'opencv').as_posix()+'\n'+block)
-        (notices/'MINIMAL-OPENCV-NOTICES.txt').write_text('\n\n'.join(sections)+'\n')
+        (notices/'MINIMAL-OPENCV-NOTICES.txt').write_text('\n\n'.join(sections)+'\n', encoding='utf-8')
         for dependency in ('zlib','flatbuffers','dlpack'):
             for license_file in (source/'opencv'/'3rdparty'/dependency).glob('LICENSE*'):
                 shutil.copy2(license_file, notices/(dependency+'-'+license_file.name))
@@ -211,8 +215,8 @@ def build(install=True, jobs=None):
             'Runtime modules: core, flann, geometry, imgproc, python3. No FFmpeg or video codecs.\n'
             'Two build-only typing generation guards skip omitted optional symbols and aliases.\n'
             'The exact patches are in tools/build_opencv.py in the Knot Studio source.\n'
-            'The upstream generic LICENSE-3RD-PARTY also describes optional components not built here.\n')
-        (package/'cv2'/'knotstudio_build.json').write_text(json.dumps(manifest,indent=2)+'\n')
+            'The upstream generic LICENSE-3RD-PARTY also describes optional components not built here.\n', encoding='utf-8')
+        (package/'cv2'/'knotstudio_build.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')
         cache.mkdir(parents=True,exist_ok=True)
         run([sys.executable, '-m', 'wheel', 'pack', package, '-d', cache])
         cached = list(cache.glob('*.whl'))

@@ -60,8 +60,6 @@ python tools/build_desktop.py --gui-test --installer `
   --tessdata build/inputs/tessdata --runtime-notices build/inputs/runtime
 ```
 
-Set `VCPKG_COMMIT` to the `builtin-baseline` value from
-`packaging/vcpkg/vcpkg.json` when invoking the Windows builder outside CI.
 OCR is built from the exact vcpkg baseline in `packaging/vcpkg/vcpkg.json`.
 Native OCR libraries are linked statically, using the dynamic Microsoft runtime;
 required runtime DLLs and installed dependency notices are bundled. Training

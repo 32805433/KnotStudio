@@ -39,6 +39,8 @@ def assemble(root, artifacts, output, commit):
         folder = artifacts/f'KnotStudio-{target}'
         verification = json.loads((folder/'verification.json').read_text(encoding='utf-8'))
         info = json.loads((folder/'build-info.json').read_text(encoding='utf-8'))
+        if info.get('source_dirty') is not False or verification.get('source_dirty') is not False:
+            raise ValueError(f'{target}: build and verification must confirm clean source (source_dirty=false)')
         if not verification.get('ok') or not verification.get('gui_requested'):
             raise ValueError(f'{target}: packaged GUI checks did not pass')
         if info.get('source_commit') != commit or info.get('version') != version:

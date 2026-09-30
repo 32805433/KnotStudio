@@ -66,7 +66,8 @@ def bundle(tmp_path):
         folder.mkdir(parents=True)
         folders[target] = folder
         platform, architecture = target.split('-', 1)
-        info = dict(version=VERSION, source_commit=COMMIT, platform=platform, architecture=architecture)
+        info = dict(version=VERSION, source_commit=COMMIT, source_dirty=False,
+                    platform=platform, architecture=architecture)
         write_json(folder/'build-info.json', info)
         verification = dict(info, ok=True, gui_requested=True)
         if platform == 'Windows':
@@ -142,6 +143,22 @@ def test_rejects_verification_from_a_different_build(bundle, field, value):
     update_json(bundle.folders['macOS-arm64']/'verification.json', **{field: value})
     with pytest.raises(ValueError):
         assemble(bundle)
+
+
+@pytest.mark.parametrize('report_name', ['build-info.json', 'verification.json'])
+@pytest.mark.parametrize('flag', [{}, {'source_dirty': None}, {'source_dirty': True},
+                                {'source_dirty': 0}, {'source_dirty': ''},
+                                {'source_dirty': 'false'}, {'source_dirty': []}],
+                         ids=['missing', 'null', 'dirty', 'zero', 'empty-string', 'false-string', 'empty-list'])
+def test_release_requires_explicit_clean_source_in_both_build_and_verification(bundle, report_name, flag):
+    report = bundle.folders['Linux-x86_64']/report_name
+    data = json.loads(report.read_text(encoding='utf-8'))
+    del data['source_dirty']
+    data.update(flag)
+    write_json(report, data)
+    with pytest.raises(ValueError, match='source_dirty=false'):
+        assemble(bundle)
+    assert not list(bundle.output.iterdir())
 
 
 @pytest.mark.parametrize('field', ['ok', 'gui_requested'])

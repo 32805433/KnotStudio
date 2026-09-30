@@ -18,7 +18,15 @@ def debian_package(path: Path) -> str:
         result = subprocess.run(['dpkg-query', '-S', str(candidate)],
                                 text=True, capture_output=True, check=False)
         if result.returncode == 0:
-            return result.stdout.split(': ', 1)[0].splitlines()[0]
+            for line in result.stdout.splitlines():
+                owners, separator, _ = line.partition(': ')
+                if not separator:
+                    continue
+                # dpkg-query may print diversion explanations before the
+                # actual owner. They are prose, not package identifiers.
+                for owner in owners.split(', '):
+                    if re.fullmatch(r'[a-z0-9][a-z0-9+.-]*(?::[a-z0-9][a-z0-9-]*)?', owner):
+                        return owner
     raise RuntimeError(f'No Debian package owns {path.name}.')
 
 
@@ -48,7 +56,7 @@ def collect_debian(paths, component, file, issues):
              f'debian:{package}/usr/share/doc/{name}/copyright')
 
 
-def parse_vcpkg_status(text):
+def parse_vcpkg_status(text, architecture=None):
     """Return exact installed port versions, omitting feature-only stanzas."""
     packages = {}
     for stanza in re.split(r'\n\s*\n', text):
@@ -58,6 +66,8 @@ def parse_vcpkg_status(text):
                 key, value = line.split(': ', 1)
                 fields[key] = value
         if fields.get('Status') == 'install ok installed' and 'Feature' not in fields:
+            if architecture is not None and fields.get('Architecture') != architecture:
+                continue
             name = fields.get('Package')
             if name:
                 packages[name] = fields
@@ -70,7 +80,7 @@ def collect_vcpkg(root, component, file, issues):
     if not status.is_file():
         issues.append('OCR vcpkg installed package status is missing; pass --ocr-root for its target triplet.')
         return
-    ports = parse_vcpkg_status(status.read_text(encoding='utf-8'))
+    ports = parse_vcpkg_status(status.read_text(encoding='utf-8'), architecture=root.name)
     commit = os.environ.get('VCPKG_COMMIT', '')
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         issues.append('VCPKG_COMMIT must identify the exact 40-character source baseline.')
