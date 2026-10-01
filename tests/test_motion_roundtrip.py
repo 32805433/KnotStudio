@@ -63,6 +63,54 @@ def test_r2_creation_and_new_gesture_removal_keep_orientations_after_json(under)
     assert source == snapshot
 
 
+@pytest.mark.parametrize('under', [False, True])
+@pytest.mark.parametrize('old_over', [False, True])
+@pytest.mark.parametrize('radius', [65., 120.])
+@pytest.mark.parametrize('incremental', [False, True])
+def test_local_r2_birth_inside_large_bigon_keeps_the_requested_sheet(
+        under, old_over, radius, incremental):
+    # Two old crossings bound a broad lens. Pushing a small finger across its
+    # opposite side is a NEW RII pair, even when the lens initially shrinks.
+    height = 20 if old_over else -20
+    source = from_curves([circle(300, 180, 80, height),
+                          circle(300, 280, 110, -height)], 600, 600)
+    source = reverse_component(source, 0)
+    snapshot = deepcopy(source)
+    anchor = np.array([300., 100.])
+    drag = SmoothDrag(source, edge_near(source, anchor), anchor, radius,
+                      under=not under)
+    if incremental:
+        for dy in (20, 40, 60):
+            assert len(drag.move(anchor+[0, dy])['crossings']) == 2
+        displacements = (80, 95, 110)
+    else:
+        displacements = (110,)
+    for dy in displacements:
+        result = drag.move(anchor+[0, dy], under=under)
+        assert validate(result)['valid'] and len(result['crossings']) == 4
+        newborn = [c for c in result['crossings']
+                   if max(b['weight'] for b in c['motion_branches']) > 1e-8]
+        assert len(newborn) == 2
+        assert all(max(c['motion_branches'], key=lambda b: b['weight'])['over']
+                   is not under for c in newborn)
+        assert sorted(crossing_sign(result, c['id']) for c in newborn) == [-1, 1]
+        for crossing in result['crossings']:
+            if crossing in newborn:
+                continue
+            moving = next(b for b in crossing['motion_branches'] if b['curve'] == 0)
+            assert moving['over'] is old_over
+        assert area_signs(result) == area_signs(source)
+    # Changing Shift after birth cannot switch the pair; saving and picking
+    # it up again must still allow cancellation back to the original diagram.
+    assert drag.move(anchor+[0, 110], under=not under) == result
+    saved = json.loads(json.dumps(result))
+    restored = SmoothDrag(saved, edge_near(saved, anchor+[0, 110]),
+                          anchor+[0, 110], radius).move(anchor)
+    assert same_pd_projection(pd_code(restored), pd_code(source))
+    assert len(component_walks(restored)) == 2
+    assert source == snapshot
+
+
 def r3_curves(offset, heights):
     y = 300-math.sqrt(130**2-80**2)
     return [circle(220, 300, 130, heights[0]), circle(380, 300, 130, heights[1]),

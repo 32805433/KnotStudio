@@ -1208,7 +1208,14 @@ class SmoothDrag:
                     paths.append(edge['points'])
                 if len(spans)!=2:continue
                 for i,(ci,start,length,over) in enumerate(spans):
-                    if ci!=self.ci or (self.center-start)%self.curves[ci].length>length:continue
+                    if ci!=self.ci:continue
+                    offset=(self.center-start)%self.curves[ci].length
+                    if offset>length:continue
+                    # Cancellation continuation applies only when the whole
+                    # selected side of the old bigon is in the moving patch.
+                    # A local finger inside a larger lens creates a genuine
+                    # new pair: its distant corners must not override Shift.
+                    if max(offset,length-offset)>=self.radius:continue
                     other=np.asarray(paths[1-i]);s=np.r_[0.,np.cumsum(np.linalg.norm(np.diff(other,axis=0),axis=1))]
                     middle=other[np.searchsorted(s,s[-1]/2)]
                     self._cancellation_regions.append((spans,i,middle-self.anchor))
@@ -1558,7 +1565,12 @@ class SmoothDrag:
         # requires; a midpoint additionally bounds continuation ambiguity for
         # long RIII slides. Retry the previous fine chronology when needed.
         coarse={1.:False,**mandatory}
-        if count>1:coarse.setdefault(.5,False)
+        # RII intervals already provide the continuation frames. An extra
+        # arbitrary midpoint can land just before a tangency, leaving less
+        # than the spatial clearance to prepare the requested over/under lift.
+        # Prepare that lift from the previous safe frame instead; every event
+        # interval and the complete swept-motion checks are still required.
+        if count>1 and not events:coarse.setdefault(.5,False)
         if len(coarse)>=len(fractions):coarse=fractions
         def restore():
             for name,value in saved.items():setattr(self,name,value)
