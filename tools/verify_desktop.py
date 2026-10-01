@@ -24,7 +24,11 @@ def isolated_environment(empty_path: Path):
            if not key.upper().startswith(('PYTHON', 'DYLD_', 'LD_', '_PYI_',
                                           'TESSDATA', 'TESSERACT', 'KNOTSTUDIO'))}
     if sys.platform == 'win32':
-        env['PATH'] = str(Path(env.get('SystemRoot', r'C:\Windows')) / 'System32')
+        # os.environ is case-insensitive on Windows, but this copied dict is
+        # not; its keys commonly contain SYSTEMROOT in uppercase.
+        system_root = next((value for key, value in env.items()
+                            if key.upper() == 'SYSTEMROOT'), r'C:\Windows')
+        env['PATH'] = str(Path(system_root) / 'System32')
     else:
         # Even /usr/bin may contain Python and Tesseract on the build machine.
         # All child executables required by the app must use bundled paths.

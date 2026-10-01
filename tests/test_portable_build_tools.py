@@ -289,6 +289,18 @@ def test_relocated_selftest_cannot_use_build_machine_python_ocr_or_library_paths
     assert env['PATH'] == str(expected)
 
 
+@pytest.mark.parametrize('key', ['SYSTEMROOT', 'systemroot', 'SyStEmRoOt'])
+def test_windows_isolation_honors_case_insensitive_systemroot_in_copied_environment(tmp_path, monkeypatch, key):
+    system_root = tmp_path/'Custom Windows Ω'
+    original = {key: str(system_root), 'PATH': 'build-machine tools'}
+    monkeypatch.setattr(verify_desktop, 'os', SimpleNamespace(environ=original))
+    monkeypatch.setattr(verify_desktop, 'sys', SimpleNamespace(platform='win32'))
+    isolated = verify_desktop.isolated_environment(tmp_path/'empty-path')
+    assert isolated['PATH'] == str(system_root/'System32')
+    assert isolated[key] == str(system_root)
+    assert original['PATH'] == 'build-machine tools'
+
+
 @pytest.mark.parametrize('exit_code,reported_ok,expected', [(0, True, True), (23, True, False), (0, False, False), (0, None, False)])
 def test_relocated_process_requires_both_successful_exit_and_successful_report(tmp_path, monkeypatch, exit_code, reported_ok, expected):
     def run(command, **kwargs):
