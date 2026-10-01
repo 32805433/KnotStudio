@@ -4,6 +4,12 @@ Knot Studio turns pictures of knots and links into editable diagrams. Draw,
 move strands, perform Reidemeister moves, smooth diagrams, and export images,
 PD code or LaTeX. Numbered twist boxes are experimental.
 
+## What is new
+
+- Windows installer and portable app, plus a Linux package for Ubuntu 24.04 or later.
+- Native keyboard shortcuts and scrolling on each platform.
+- Correct over/under choice when dragging a new Reidemeister II pair inside a larger bigon.
+
 ## Packages
 
 - **macOS-arm64.zip**: Apple silicon, macOS 15.7.5 or later.
@@ -19,7 +25,10 @@ Default Mac builds are not notarized and Windows builds are unsigned. See the
 [installation guide](https://github.com/32805433/KnotStudio/blob/main/docs/INSTALLING.md)
 for opening a trusted download.
 
-## Desktop validation before publication
+## Verification
 
-Record the tested OS versions and results here before publishing the draft.
-Windows hosted-runner checks alone do not certify Windows 10 or 11 desktop behavior.
+Automated package checks cover startup, image recognition, OCR, editing, file
+exports, and the graphical interface on macOS ARM64, Windows Server 2022, and
+Ubuntu 24.04. The Windows installer also passes installation and uninstall checks.
+See `verification.json` for the build environments and detailed results. Windows
+10 22H2 compatibility remains a target rather than a result of these checks.
