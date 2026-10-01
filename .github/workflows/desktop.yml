@@ -25,8 +25,8 @@ jobs:
             platform: Linux-x86_64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         if: runner.os != 'macOS'
         with:
           python-version: '3.13.2'
@@ -44,16 +44,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr libtesseract-dev libleptonica-dev tcl8.6-dev tk8.6-dev xvfb xauth patchelf
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure Windows compiler
         if: runner.os == 'Windows'
-        with:
-          arch: x64
-      - uses: actions/cache/restore@v4
+        shell: pwsh
+        run: ./tools/setup_windows_compiler.ps1
+      - uses: actions/cache/restore@v6
         id: opencv-cache
         with:
           path: build/opencv/wheels
           key: opencv-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('tools/build_opencv.py', 'requirements-*.txt') }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         id: ocr-cache
         if: runner.os == 'Windows'
         with:
@@ -67,7 +67,7 @@ jobs:
           $env:VCPKG_BINARY_SOURCES = "clear;files,$PWD/build/vcpkg-cache,readwrite"
           ./tools/prepare_windows_ocr.ps1
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: runner.os == 'Windows' && steps.ocr-cache.outputs.cache-hit != 'true'
         with:
           path: build/vcpkg-cache
@@ -80,7 +80,7 @@ jobs:
           python tools/check_release.py --import-modules
       - name: Build minimal OpenCV
         run: python tools/build_opencv.py
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: steps.opencv-cache.outputs.cache-hit != 'true'
         with:
           path: build/opencv/wheels
@@ -98,7 +98,7 @@ jobs:
       - name: Build and verify Linux app
         if: runner.os == 'Linux'
         run: xvfb-run -a python tools/build_desktop.py --gui-test --tessdata build/inputs/tessdata --runtime-notices build/inputs/runtime
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: success()
         with:
           name: KnotStudio-${{ matrix.platform }}
@@ -111,7 +111,7 @@ jobs:
             dist/build-info.json
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: diagnostics-${{ matrix.platform }}
