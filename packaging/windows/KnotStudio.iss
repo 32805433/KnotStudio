@@ -7,6 +7,7 @@
 #endif
 [Setup]
 AppId={code:ApplicationId}
+UsePreviousLanguage=no
 AppName=Knot Studio
 AppVersion={#AppVersion}
 AppPublisher=Knot Studio contributors

@@ -132,6 +132,8 @@ def test_native_document_launcher_preserves_path_and_system_libraries(
 
 def test_windows_document_launcher_uses_file_association(tmp_path, monkeypatch):
     platform(monkeypatch, 'win32')
+    monkeypatch.setattr(desktop, '_open_frozen_windows_document',
+                        lambda path: pytest.fail('Unfrozen launch changed DLL search paths'))
     document = tmp_path/'Guide with spaces.html'
     document.write_text('Guide')
     opened = []
@@ -140,6 +142,99 @@ def test_windows_document_launcher_uses_file_association(tmp_path, monkeypatch):
     assert opened == [str(document)]
     with pytest.raises(FileNotFoundError):
         desktop.open_local_document(tmp_path/'missing.html')
+
+
+def windows_dll_api(monkeypatch, original, *, failure=None, grow=False):
+    """Fake only Win32 calls, keeping real ctypes Unicode buffer handling."""
+    import ctypes
+    calls = []
+    error = [0]
+
+    def get_directory(size, buffer):
+        calls.append(('get', size))
+        if failure == ('query' if size == 0 else 'read'):
+            error[0] = 5
+            return 0
+        if size == 0:
+            return 2 if grow else len(original) + 1 if original else 0
+        if size <= len(original):
+            return len(original) + 1
+        buffer.value = original
+        return len(original)
+
+    def set_directory(value):
+        calls.append(('set', value))
+        if failure == ('clear' if value is None else 'restore'):
+            error[0] = 5
+            return 0
+        return 1
+
+    def load(name, *, use_last_error):
+        assert name == 'kernel32' and use_last_error
+        return SimpleNamespace(GetDllDirectoryW=get_directory, SetDllDirectoryW=set_directory)
+
+    monkeypatch.setattr(ctypes, 'WinDLL', load, raising=False)
+    monkeypatch.setattr(ctypes, 'set_last_error', lambda value: error.__setitem__(0, value), raising=False)
+    monkeypatch.setattr(ctypes, 'get_last_error', lambda: error[0], raising=False)
+    monkeypatch.setattr(ctypes, 'WinError', lambda code: OSError(code, 'Win32 failure'), raising=False)
+    return calls
+
+
+@pytest.mark.parametrize('launch_fails', [False, True])
+@pytest.mark.parametrize('original', [r'C:\Actual DLL folder ü', ''])
+def test_frozen_windows_document_launch_restores_actual_dll_directory(
+        tmp_path, monkeypatch, original, launch_fails):
+    platform(monkeypatch, 'win32', frozen=True)
+    desktop.sys._MEIPASS = r'C:\Different bundle directory'
+    document = tmp_path/'Guide with spaces ü.html'
+    document.write_text('Guide')
+    calls = windows_dll_api(monkeypatch, original)
+    launch_error = OSError('No file association')
+
+    def startfile(path):
+        calls.append(('open', path))
+        if launch_fails:
+            raise launch_error
+
+    monkeypatch.setattr(os, 'startfile', startfile, raising=False)
+    if launch_fails:
+        with pytest.raises(OSError) as error:
+            desktop.open_local_document(document)
+        assert error.value is launch_error
+    else:
+        desktop.open_local_document(document)
+    changes = [call for call in calls if call[0] != 'get']
+    assert changes == ([('set', None), ('open', str(document)), ('set', original)]
+                       if original else [('open', str(document))])
+
+
+@pytest.mark.parametrize('failure', ['query', 'read', 'clear', 'restore'])
+def test_frozen_windows_document_launch_checks_win32_failures(tmp_path, monkeypatch, failure):
+    platform(monkeypatch, 'win32', frozen=True)
+    document = tmp_path/'Guide.html'
+    document.write_text('Guide')
+    original = r'C:\Original DLL directory'
+    calls = windows_dll_api(monkeypatch, original, failure=failure)
+    monkeypatch.setattr(os, 'startfile', lambda path: calls.append(('open', path)), raising=False)
+    with pytest.raises(OSError, match='Win32 failure') as error:
+        desktop.open_local_document(document)
+    assert error.value.errno == 5
+    changes = [call for call in calls if call[0] != 'get']
+    expected = {'query': [], 'read': [], 'clear': [('set', None)],
+                'restore': [('set', None), ('open', str(document)), ('set', original)]}
+    assert changes == expected[failure]
+
+
+def test_frozen_windows_document_launch_retries_a_growing_dll_path(tmp_path, monkeypatch):
+    platform(monkeypatch, 'win32', frozen=True)
+    document = tmp_path/'Guide.html'
+    document.write_text('Guide')
+    original = r'C:\A longer DLL directory ü'
+    calls = windows_dll_api(monkeypatch, original, grow=True)
+    monkeypatch.setattr(os, 'startfile', lambda path: calls.append(('open', path)), raising=False)
+    desktop.open_local_document(document)
+    assert len([call for call in calls if call[0] == 'get']) == 3
+    assert calls[-3:] == [('set', None), ('open', str(document)), ('set', original)]
 
 
 @pytest.mark.parametrize('windowing_system, delta, button, precise, expected', [

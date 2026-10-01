@@ -56,11 +56,52 @@ def initial_window_size(screen_width, screen_height):
     return min(1280, max(1, screen_width - 80)), min(840, max(1, screen_height - 100))
 
 
+def _open_frozen_windows_document(path):
+    """Keep PyInstaller's DLL directory out of an external app's search path."""
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    get_directory = kernel32.GetDllDirectoryW
+    get_directory.argtypes = [wintypes.DWORD, wintypes.LPWSTR]
+    get_directory.restype = wintypes.DWORD
+    set_directory = kernel32.SetDllDirectoryW
+    set_directory.argtypes = [wintypes.LPCWSTR]
+    set_directory.restype = wintypes.BOOL
+
+    size = 0
+    while True:
+        buffer = ctypes.create_unicode_buffer(size) if size else None
+        ctypes.set_last_error(0)
+        length = get_directory(size, buffer)
+        if not length and ctypes.get_last_error():
+            raise ctypes.WinError(ctypes.get_last_error())
+        if not length or length < size:
+            original = buffer.value if buffer is not None else ''
+            break
+        # Retry if another caller changed the directory since the size query.
+        size = length + 1
+    if not original:
+        # Already clear; leave the original empty/default search mode intact.
+        os.startfile(path)
+        return
+    if not set_directory(None):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        os.startfile(path)
+    finally:
+        if not set_directory(original):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+
 def open_local_document(path):
     """Ask the desktop to open a local file, including paths with spaces."""
     path = Path(path).resolve(strict=True)
     if sys.platform == 'win32':
-        os.startfile(str(path))
+        if getattr(sys, 'frozen', False):
+            _open_frozen_windows_document(str(path))
+        else:
+            os.startfile(str(path))
         return
     environment = os.environ.copy()
     if getattr(sys, 'frozen', False):
