@@ -222,7 +222,8 @@ def mock_api(monkeypatch, releases=None, refs=None, failure=None):
     def output(command, **kwargs):
         assert command == ['git', 'rev-parse', 'HEAD']
         return COMMIT + '\n'
-    def api(*args):
+    def api(*args, cwd):
+        assert (cwd/'pyproject.toml').is_file()
         calls.append(args)
         kind = 'tag' if '--method' in args else 'releases' if '--paginate' in args else 'refs'
         if failure and failure[0] == kind:
@@ -294,7 +295,7 @@ def test_draft_creation_targets_verified_commit_and_keeps_assets_as_separate_arg
     assert calls[-1][1:3] == ('--method', 'POST')
     assert command[command.index('--notes-file')+1] == str(bundle.root/'docs/RELEASE_NOTES.md')
     assert set(command[command.index('--notes-file')+2:]) == {str(path) for path in bundle.output.iterdir()}
-    assert '--clobber' not in command and options == {'check': True}
+    assert '--clobber' not in command and options == {'check': True, 'cwd': bundle.root}
 
 
 def test_draft_creation_rejects_unvalidated_asset_directory(bundle, monkeypatch):

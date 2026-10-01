@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ''):
@@ -155,9 +156,12 @@ def verify_installer(installer: Path, output: Path, gui=False):
         with tempfile.TemporaryDirectory(prefix='Knot Studio installer ') as directory:
             temporary = Path(directory)
             installed = temporary / 'Installed Knot Studio'
+            verification_id = uuid.uuid4().hex
             try:
                 subprocess.run([str(installer.resolve()), '/VERYSILENT', '/SUPPRESSMSGBOXES',
-                                '/NORESTART', '/SP-', f'/DIR={installed}',
+                                '/NORESTART', '/SP-', '/NOICONS', f'/DIR={installed}',
+                                f'/KnotStudioVerify={verification_id}',
+                                f'/GROUP=Knot Studio Verification {verification_id}',
                                 f'/LOG={temporary / "install.log"}'], check=True, timeout=180)
                 runtime = self_test(installed / 'KnotStudio.exe', temporary, gui=gui)
             finally:

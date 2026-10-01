@@ -61,6 +61,21 @@ def cmake_flags(system=None, architecture=None):
     return flags
 
 
+def patch_windows_wheel_manifest(setup: Path):
+    """Remove the one required wheel member belonging to disabled videoio."""
+    before = (
+        '            [r"bin/opencv_videoio_ffmpeg\\d{3}%s\\.dll" % ("_64" if is64 else "")]\n'
+        '            if os.name == "nt"\n'
+        '            else []'
+    )
+    after = '            []  # Knot Studio minimal build: no videoio/FFmpeg DLL.'
+    content = setup.read_text(encoding='utf-8')
+    if content.count(before) == 1:
+        setup.write_text(content.replace(before, after, 1), encoding='utf-8')
+    elif after not in content:
+        raise RuntimeError('OpenCV Windows wheel manifest patch no longer applies')
+
+
 def run(args, **kwargs):
     print('+', ' '.join(map(str, args)), flush=True)
     subprocess.run(list(map(str, args)), check=True, **kwargs)
@@ -123,7 +138,8 @@ def build(install=True, jobs=None):
                 'build_tools': {name: metadata.version(name) for name in
                                 ('numpy','cmake','ninja','scikit-build','setuptools','wheel')},
                 'minimum_macos': '15.0' if sys.platform == 'darwin' else None,
-                'typing_patch_revision':2, 'notices_revision':1}
+                'typing_patch_revision':2, 'notices_revision':2,
+                'windows_wheel_patch_revision': 1 if sys.platform == 'win32' else 0}
     key = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
     cache = wheels/key
     cached = list(cache.glob('*.whl')) if cache.is_dir() else []
@@ -138,6 +154,10 @@ def build(install=True, jobs=None):
         if not source.is_dir():
             with tarfile.open(archive) as package:
                 package.extractall(work, filter='data')
+        if sys.platform == 'win32':
+            # Upstream always requires its FFmpeg DLL in Windows wheels even
+            # when videoio is disabled. Keep all other wheel members required.
+            patch_windows_wheel_manifest(source / 'setup.py')
         # OpenCV 5's typing generator assumes every optional module is present.
         # Restrict its refinements to symbols compiled in this minimal build.
         refinement = source/'opencv/modules/python/src2/typing_stubs_generation/api_refinement.py'
@@ -214,6 +234,7 @@ def build(install=True, jobs=None):
             'Minimal OpenCV built from the source and options in cv2/knotstudio_build.json.\n'
             'Runtime modules: core, flann, geometry, imgproc, python3. No FFmpeg or video codecs.\n'
             'Two build-only typing generation guards skip omitted optional symbols and aliases.\n'
+            'On Windows, the wheel file manifest omits the disabled videoio/FFmpeg DLL.\n'
             'The exact patches are in tools/build_opencv.py in the Knot Studio source.\n'
             'The upstream generic LICENSE-3RD-PARTY also describes optional components not built here.\n', encoding='utf-8')
         (package/'cv2'/'knotstudio_build.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')

@@ -1,8 +1,13 @@
 """Native build dependency and relocation checks without native build tools."""
+import ast
+import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 from types import SimpleNamespace
+import uuid
 import zipfile
 
 import pytest
@@ -99,6 +104,50 @@ def test_opencv_build_flags_keep_only_needed_modules_and_use_native_toolchain(sy
 def test_opencv_rejects_unsupported_build_platform():
     with pytest.raises(ValueError, match='Unsupported'):
         build_opencv.cmake_flags('freebsd', 'x86_64')
+
+
+def test_windows_opencv_manifest_patch_removes_only_disabled_ffmpeg_requirement(tmp_path):
+    setup = tmp_path/'setup.py'
+    source = r'''is64 = True
+required = {
+    "cv2": ["cv2.pyd", "data/notice.txt"] + (
+            [r"bin/opencv_videoio_ffmpeg\d{3}%s\.dll" % ("_64" if is64 else "")]
+            if os.name == "nt"
+            else []
+    ),
+    "other": ["other/data.bin"],
+}
+def validate_members(members):
+    if any(not isinstance(member, str) or not member for member in members):
+        raise ValueError("Invalid required wheel member")
+    return members
+'''
+    setup.write_text(source, encoding='utf-8')
+    ast.parse(source)
+    build_opencv.patch_windows_wheel_manifest(setup)
+    patched = setup.read_text(encoding='utf-8')
+    namespace = {'os': SimpleNamespace(name='nt')}
+    exec(compile(ast.parse(patched), str(setup), 'exec'), namespace)
+    assert namespace['required'] == {'cv2': ['cv2.pyd', 'data/notice.txt'], 'other': ['other/data.bin']}
+    assert namespace['validate_members'](['cv2.pyd']) == ['cv2.pyd']
+    with pytest.raises(ValueError, match='Invalid required wheel member'):
+        namespace['validate_members']([''])
+    build_opencv.patch_windows_wheel_manifest(setup)
+    assert setup.read_text(encoding='utf-8') == patched
+
+
+@pytest.mark.parametrize('source', [
+    'required = {"cv2": ["new-videoio-layout.dll"]}\n',
+    ('            [r"bin/opencv_videoio_ffmpeg\\d{3}%s\\.dll" % ("_64" if is64 else "")]\n'
+     '            if os.name == "nt"\n'
+     '            else []\n') * 2,
+])
+def test_windows_opencv_manifest_patch_rejects_changed_or_ambiguous_upstream_source(tmp_path, source):
+    setup = tmp_path/'setup.py'
+    setup.write_text(source, encoding='utf-8')
+    with pytest.raises(RuntimeError, match='patch no longer applies'):
+        build_opencv.patch_windows_wheel_manifest(setup)
+    assert setup.read_text(encoding='utf-8') == source
 
 
 @pytest.mark.parametrize('name', ['ld-linux-x86-64.so.2', 'libc.so.6', 'libm.so.6', 'libpthread.so.0',
@@ -255,6 +304,78 @@ def test_relocated_process_requires_both_successful_exit_and_successful_report(t
         assert result['detail'] == 'process diagnostic'
 
 
+@pytest.fixture
+def installer_probe(tmp_path, monkeypatch):
+    installer = tmp_path/'Knot Studio Ω Setup.exe'
+    installer.write_bytes(b'inert installer fixture')
+    calls, installed_paths = [], []
+    state = SimpleNamespace(failure=None)
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        assert kwargs == {'check': True, 'timeout': 180}
+        if command[0] == str(installer.resolve()):
+            directory = Path(next(arg.removeprefix('/DIR=') for arg in command if arg.startswith('/DIR=')))
+            assert directory.is_relative_to(tmp_path)
+            directory.mkdir()
+            (directory/'unins000.exe').write_bytes(b'inert uninstaller fixture')
+            installed_paths.append(directory)
+            if state.failure == 'install':
+                raise subprocess.CalledProcessError(1, command)
+        else:
+            assert command == [str(installed_paths[-1]/'unins000.exe'), '/VERYSILENT',
+                               '/SUPPRESSMSGBOXES', '/NORESTART']
+    def self_test(executable, temporary, gui=False):
+        assert executable == installed_paths[-1]/'KnotStudio.exe'
+        assert temporary == installed_paths[-1].parent and gui is True
+        if state.failure == 'timeout':
+            raise subprocess.TimeoutExpired([str(executable)], 240)
+        return {'ok': state.failure != 'report', 'exit_code': 0}
+    monkeypatch.setattr(verify_desktop, 'sys', SimpleNamespace(platform='win32'))
+    monkeypatch.setattr(verify_desktop, 'subprocess', SimpleNamespace(run=run, SubprocessError=subprocess.SubprocessError))
+    monkeypatch.setattr(verify_desktop, 'self_test', self_test)
+    monkeypatch.setattr(verify_desktop, 'tempfile', SimpleNamespace(
+        TemporaryDirectory=lambda **kwargs: tempfile.TemporaryDirectory(dir=tmp_path, **kwargs)))
+    return SimpleNamespace(installer=installer, calls=calls, installed_paths=installed_paths, state=state)
+
+
+def test_installer_verification_uses_unique_registration_and_cleans_up_each_install(tmp_path, installer_probe):
+    probe = installer_probe
+    identifiers = []
+    for index in range(2):
+        report = tmp_path/f'verification-{index}.json'
+        report.write_text(json.dumps({'ok': True, 'source_commit': 'a'*40}), encoding='utf-8')
+        result = verify_desktop.verify_installer(probe.installer, report, gui=True)
+        assert result['ok'] is True and result['installer_self_test']['ok'] is True
+        assert result['source_commit'] == 'a'*40
+        command = probe.calls[index*2][0]
+        identifier = next(arg.removeprefix('/KnotStudioVerify=') for arg in command
+                          if arg.startswith('/KnotStudioVerify='))
+        assert uuid.UUID(hex=identifier).hex == identifier
+        assert '/NOICONS' in command and f'/GROUP=Knot Studio Verification {identifier}' in command
+        assert '/VERYSILENT' in command and '/NORESTART' in command
+        identifiers.append(identifier)
+        assert not probe.installed_paths[-1].exists()
+        assert json.loads(report.read_text(encoding='utf-8')) == result
+    assert len(probe.calls) == 4
+    assert identifiers[0] != identifiers[1]
+    assert probe.installed_paths[0] != probe.installed_paths[1]
+
+
+@pytest.mark.parametrize('failure', ['report', 'timeout', 'install'])
+def test_failed_installer_verification_still_uninstalls_and_records_failure(tmp_path, installer_probe, failure):
+    probe = installer_probe
+    probe.state.failure = failure
+    report = tmp_path/'verification.json'
+    report.write_text(json.dumps({'ok': True}), encoding='utf-8')
+    with pytest.raises(RuntimeError, match='Installer verification failed'):
+        verify_desktop.verify_installer(probe.installer, report, gui=True)
+    assert len(probe.calls) == 2
+    assert Path(probe.calls[1][0][0]).name == 'unins000.exe'
+    assert not probe.installed_paths[-1].exists()
+    recorded = json.loads(report.read_text(encoding='utf-8'))
+    assert recorded['ok'] is False and recorded['installer_self_test']['ok'] is False
+
+
 def status_stanza(name, architecture='x64-windows-static-md', **fields):
     record = dict(Package=name, Architecture=architecture, Version='5.5.1', Status='install ok installed', **fields)
     return '\n'.join(f'{key}: {value}' for key, value in record.items())+'\n\n'
@@ -288,3 +409,97 @@ def test_vcpkg_collector_keeps_target_ports_when_host_ports_follow_them(tmp_path
     assert {record['name'] for record in records} == {'tesseract', 'leptonica'}
     assert all(record['architecture'] == target.name and record['vcpkg_commit'] == 'a'*40 for record in records)
     assert len(notices) == 2
+
+
+@pytest.mark.parametrize('unknown_dependency', [False, True])
+def test_linux_notices_cover_ocr_and_tk_dependencies_without_hiding_unknown_owners(tmp_path, monkeypatch, unknown_dependency):
+    base = tmp_path/'python'
+    tesseract = tmp_path/'usr/bin/tesseract'
+    tkinter_extension = base/'lib/_tkinter.so'
+    bundled_python = base/'lib/libpython3.13.so.1.0'
+    libraries = {name: tmp_path/'usr/lib'/name for name in
+                 ('libtesseract.so.5', 'libc.so.6', 'libtcl8.6.so', 'libtk8.6.so', 'libX11.so.6',
+                  'libpython3.13.so.1.0', 'libunowned.so')}
+    owners = {tesseract: 'tesseract-ocr', libraries['libtesseract.so.5']: 'libtesseract5',
+              libraries['libc.so.6']: 'libc6', libraries['libtcl8.6.so']: 'libtcl8.6',
+              libraries['libtk8.6.so']: 'libtk8.6', libraries['libX11.so.6']: 'libx11-6',
+              libraries['libpython3.13.so.1.0']: 'libpython3.13'}
+    probes, owner_checks, notices, components, issues = [], [], [], [], []
+    def links(binary):
+        probes.append(binary)
+        if binary == tesseract:
+            return [libraries['libtesseract.so.5'], libraries['libc.so.6']], []
+        assert binary == tkinter_extension
+        result = [libraries[name] for name in ('libtcl8.6.so', 'libtk8.6.so', 'libX11.so.6',
+                                               'libc.so.6', 'libpython3.13.so.1.0')]
+        return [*result, bundled_python, *([libraries['libunowned.so']] if unknown_dependency else [])], []
+    def owner(path):
+        owner_checks.append(path)
+        if path not in owners:
+            raise RuntimeError(f'No Debian package owns {path.name}.')
+        return owners[path]
+    def metadata(command, **kwargs):
+        name = command[-1]
+        return f'{name}\t1.2.3\t{name}-source\t1.2.3\n'
+    def component(name, version, kind, source):
+        entry = dict(name=name, version=version, kind=kind, source=source)
+        components.append(entry)
+        return entry
+    monkeypatch.setattr(portable_licenses, 'sys', SimpleNamespace(platform='linux', base_prefix=str(base)))
+    monkeypatch.setitem(sys.modules, '_tkinter', SimpleNamespace(__file__=str(tkinter_extension)))
+    monkeypatch.setattr(native_dependencies, 'linux_links', links)
+    monkeypatch.setattr(portable_licenses, 'debian_package', owner)
+    monkeypatch.setattr(portable_licenses, 'subprocess', SimpleNamespace(
+        check_output=metadata, CalledProcessError=subprocess.CalledProcessError))
+    portable_licenses.collect_native(tesseract, None, component, lambda *args: notices.append(args), issues)
+    assert probes == [tesseract, tkinter_extension]
+    assert bundled_python not in owner_checks
+    assert libraries['libpython3.13.so.1.0'] in owner_checks
+    assert {entry['name'] for entry in components} == set(owners.values())
+    assert len(components) == len(owners) == len(notices)
+    assert issues == (['No Debian package owns libunowned.so.'] if unknown_dependency else [])
+
+
+@pytest.mark.parametrize('provenance', ['matching', 'wrong-version', 'wrong-checksum', 'missing', 'malformed'])
+def test_windows_tcl_notice_fallback_requires_exact_runtime_version_and_verified_bytes(tmp_path, monkeypatch, provenance):
+    base, staged = tmp_path/'Python', tmp_path/'staged notices'
+    tcl_library = base/'tcl'/'tcl8.6'
+    tk_notice = base/'tcl'/'tk8.6'/'license.terms'
+    tcl_notice = staged/'Tcl'/'license.terms'
+    tcl_library.mkdir(parents=True)
+    for path, text in ((base/'LICENSE.txt', 'Python license'),
+                       (staged/'Python'/'license.rst', 'Python bundled notices'),
+                       (tk_notice, 'Installed Tk notice'), (tcl_notice, 'Pinned Tcl notice fixture')):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding='utf-8')
+    record = {'version': '8.6.15', 'sha256': hashlib.sha256(tcl_notice.read_bytes()).hexdigest()}
+    if provenance == 'wrong-version':
+        record['version'] = '8.6.14'
+    if provenance == 'wrong-checksum':
+        record['sha256'] = '0'*64
+    if provenance != 'missing':
+        tcl_notice.with_name('provenance.json').write_text(
+            'not JSON' if provenance == 'malformed' else json.dumps(record), encoding='utf-8')
+    fake_tcl = SimpleNamespace(eval=lambda expression: str(tcl_library), call=lambda *args: '8.6.15')
+    monkeypatch.setitem(sys.modules, 'tkinter', SimpleNamespace(Tcl=lambda: fake_tcl, TkVersion=8.6))
+    monkeypatch.setattr(portable_licenses, 'sys', SimpleNamespace(platform='win32', version_info=sys.version_info))
+    components, copied, issues = [], {}, []
+    def component(name, version, kind, source):
+        entry = dict(name=name, version=version)
+        components.append(entry)
+        return entry
+    def copy_notice(entry, path, destination, source):
+        assert path.is_file()
+        copied[destination] = path
+    portable_licenses.collect_runtime(base, staged, component, copy_notice, issues)
+    assert copied['runtime/Tcl/license.terms'] == tcl_notice
+    assert copied['runtime/Tk/license.terms'] == tk_notice
+    tcl = next(entry for entry in components if entry['name'] == 'Tcl')
+    assert tcl['version'] == '8.6.15'
+    if provenance == 'matching':
+        assert issues == [] and tcl['notice_provenance'] == record
+    else:
+        assert len(issues) == 1
+        expected = {'wrong-version': 'describes Tcl 8.6.14', 'wrong-checksum': 'checksum differs',
+                    'missing': 'valid provenance.json', 'malformed': 'valid provenance.json'}[provenance]
+        assert expected in issues[0]

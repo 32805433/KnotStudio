@@ -6,7 +6,7 @@
   #error AppSource must point to the verified portable application
 #endif
 [Setup]
-AppId={{FD93D574-5077-433D-884E-8C0FC9F0C589}
+AppId={code:ApplicationId}
 AppName=Knot Studio
 AppVersion={#AppVersion}
 AppPublisher=Knot Studio contributors
@@ -14,6 +14,7 @@ AppPublisherURL=https://github.com/32805433/KnotStudio
 DefaultDirName={localappdata}\Programs\Knot Studio
 DefaultGroupName=Knot Studio
 DisableProgramGroupPage=yes
+AllowNoIcons=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
@@ -33,7 +34,25 @@ Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "
 [Files]
 Source: "{#AppSource}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\Knot Studio"; Filename: "{app}\KnotStudio.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Knot Studio"; Filename: "{app}\KnotStudio.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\Knot Studio"; Filename: "{app}\KnotStudio.exe"; WorkingDir: "{app}"; Check: not IsVerification
+Name: "{autodesktop}\Knot Studio"; Filename: "{app}\KnotStudio.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: not IsVerification
 [Run]
 Filename: "{app}\KnotStudio.exe"; Description: "Open Knot Studio"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function IsVerification: Boolean;
+begin
+  Result := ExpandConstant('{param:KnotStudioVerify|}') <> '';
+end;
+
+function ApplicationId(Param: String): String;
+var
+  VerificationId: String;
+begin
+  VerificationId := ExpandConstant('{param:KnotStudioVerify|}');
+  if VerificationId <> '' then
+    { A build-time test must never replace a user's installed app registration. }
+    Result := 'KnotStudioVerification-' + VerificationId
+  else
+    Result := '{FD93D574-5077-433D-884E-8C0FC9F0C589}';
+end;

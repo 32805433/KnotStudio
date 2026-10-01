@@ -7,17 +7,17 @@ import subprocess
 import tomllib
 
 
-def gh(*args):
-    return subprocess.check_output(['gh', *args], text=True).strip()
+def gh(*args, cwd):
+    return subprocess.check_output(['gh', *args], cwd=cwd, text=True).strip()
 
 
 def preflight(root, tag):
     version = tomllib.loads((root/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     if tag != 'v'+version or not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
         raise ValueError('Tag must match the version in pyproject.toml')
-    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     # API errors fail closed; a network failure is never treated as release absence.
-    releases = json.loads(gh('api', '--paginate', '--slurp', 'repos/{owner}/{repo}/releases?per_page=100'))
+    releases = json.loads(gh('api', '--paginate', '--slurp', 'repos/{owner}/{repo}/releases?per_page=100', cwd=root))
     if (not isinstance(releases, list) or not releases
             or any(not isinstance(page, list) for page in releases)
             or any(not isinstance(r, dict) or not isinstance(r.get('tag_name'), str)
@@ -25,7 +25,7 @@ def preflight(root, tag):
         raise ValueError('Malformed release API response')
     if any(r['tag_name'] == tag for page in releases for r in page):
         raise ValueError('A release with this tag already exists; use a new version')
-    refs = json.loads(gh('api', 'repos/{owner}/{repo}/git/matching-refs/tags/'+tag))
+    refs = json.loads(gh('api', 'repos/{owner}/{repo}/git/matching-refs/tags/'+tag, cwd=root))
     if (not isinstance(refs, list)
             or any(not isinstance(r, dict) or not isinstance(r.get('ref'), str) for r in refs)):
         raise ValueError('Malformed tag API response')
@@ -50,7 +50,7 @@ def main():
         # Keep a successfully created tag even if the later draft upload fails;
         # recovery is a maintainer decision, never an automatic tag deletion.
         created = json.loads(gh('api', '--method', 'POST', 'repos/{owner}/{repo}/git/refs',
-                                '-f', 'ref=refs/tags/'+args.tag, '-f', 'sha='+commit))
+                                '-f', 'ref=refs/tags/'+args.tag, '-f', 'sha='+commit, cwd=root))
         if (not isinstance(created, dict) or created.get('ref') != 'refs/tags/'+args.tag
                 or not isinstance(created.get('object'), dict)
                 or created['object'].get('sha') != commit):
@@ -58,7 +58,7 @@ def main():
         # Uploaded draft assets remain private until the maintainer publishes.
         subprocess.run(['gh', 'release', 'create', args.tag, '--draft', '--verify-tag', '--target', commit,
                         '--title', 'Knot Studio '+args.tag, '--notes-file', str(root/'docs/RELEASE_NOTES.md'),
-                        *map(str, files)], check=True)
+                        *map(str, files)], cwd=root, check=True)
     else:
         print(commit)
 

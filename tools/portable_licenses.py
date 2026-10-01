@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -136,6 +138,17 @@ def collect_runtime(base, runtime_notices, component, file, issues):
             candidates.append(notices / name / 'license.terms')
         found = next((p for p in candidates if p.is_file()), None)
         if found:
+            if name == 'Tcl' and notices is not None and found == notices / name / 'license.terms':
+                provenance = found.with_name('provenance.json')
+                try:
+                    record = json.loads(provenance.read_text(encoding='utf-8'))
+                    if record['version'] != ver:
+                        issues.append(f'Tcl {ver}: staged notice describes Tcl {record["version"]}.')
+                    if record['sha256'] != hashlib.sha256(found.read_bytes()).hexdigest():
+                        issues.append(f'Tcl {ver}: staged notice checksum differs from its source record.')
+                    entry['notice_provenance'] = record
+                except (OSError, ValueError, KeyError, TypeError):
+                    issues.append(f'Tcl {ver}: staged notice requires valid provenance.json.')
             file(entry, found, f'runtime/{name}/license.terms', f'{name} {ver}/license.terms')
         elif sys.platform.startswith('linux'):
             # Ubuntu ships the upstream notices inside the runtime package's
@@ -160,6 +173,14 @@ def collect_native(tesseract, ocr_root, component, file, issues):
             from native_dependencies import linux_links
         paths, errors = linux_links(tesseract)
         issues.extend(errors)
+        # Tk brings a separate X11/font dependency chain into the frozen app.
+        # ldd includes the full loader closure, including its indirect links.
+        import _tkinter
+        gui_paths, gui_errors = linux_links(Path(_tkinter.__file__))
+        issues.extend(gui_errors)
+        base = Path(sys.base_prefix).resolve()
+        paths += [path for path in gui_paths if not (
+            path.name.startswith('libpython') and path.resolve().is_relative_to(base))]
         collect_debian([tesseract, *paths], component, file, issues)
     else:
         issues.append(f'Unsupported native notice collector: {sys.platform}.')

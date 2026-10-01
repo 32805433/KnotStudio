@@ -298,7 +298,7 @@ def collect(output: Path, tesseract: Path | None = None, tessdata: Path | None =
         entry["license_expression"] = "Apache-2.0"
         entry["attribution"] = "Tesseract OCR project contributors; tessdata_fast English LSTM language model."
 
-    inventory = {"schema_version": 1, "scope": "Installed notices for the build interpreter, selected Python distributions, and recursively linked OCR binaries.",
+    inventory = {"schema_version": 1, "scope": "Installed notices for the build interpreter, selected Python distributions, and native OCR/GUI runtime dependencies (including the Linux Tk loader closure).",
                  "source_distribution_note": SOURCE_NOTE, "components": components,
                  "issues": sorted(set(issues)), "complete": not issues}
     encoded = json.dumps(inventory, indent=2, ensure_ascii=False) + "\n"
