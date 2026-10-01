@@ -12,7 +12,7 @@ import pytest
 from tools import assemble_release, prepare_release
 
 
-VERSION = '0.2.0'
+VERSION = '0.1.1'
 COMMIT = 'a' * 40
 
 
@@ -243,12 +243,12 @@ def mock_api(monkeypatch, releases=None, refs=None, failure=None):
 
 def test_preflight_accepts_new_tag_and_ignores_longer_tag_prefixes(bundle, monkeypatch):
     calls = mock_api(monkeypatch, releases=[[{'tag_name': 'v0.1.0'}]],
-                     refs=[{'ref': 'refs/tags/v0.2.0-preview'}])
+                     refs=[{'ref': 'refs/tags/v0.1.1-preview'}])
     assert prepare_release.preflight(bundle.root, 'v'+VERSION) == COMMIT
     assert len(calls) == 2 and '--paginate' in calls[0]
 
 
-@pytest.mark.parametrize('tag', ['v0.1.0', '0.2.0', 'v0.2.0-preview', 'v0.2.0;command'])
+@pytest.mark.parametrize('tag', ['v0.1.0', '0.1.1', 'v0.1.1-preview', 'v0.1.1;command'])
 def test_preflight_rejects_wrong_or_nonrelease_versions_before_api_access(bundle, tag):
     with pytest.raises(ValueError, match='version'):
         prepare_release.preflight(bundle.root, tag)

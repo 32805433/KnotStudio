@@ -23,9 +23,9 @@ outside it. Allow enough room inside the selection for the strands to move.
 Choose **Fit** so that you can see the entire diagram, enable **Full screen
 region (visible diagram area)**, then click **Minimize energy…**.
 
-“Full screen region” means the visible canvas; it does not mean macOS fullscreen
-mode. If you are zoomed in, the selected region may cover only part of the
-diagram. Zooming or moving the view after smoothing starts does not change the
+“Full screen region” means the visible canvas; it does not mean operating-system
+fullscreen mode. If you are zoomed in, the selected region may cover only part
+of the diagram. Zooming or moving the view after smoothing starts does not change the
 selected region.
 
 ## Stop, cancel, or undo

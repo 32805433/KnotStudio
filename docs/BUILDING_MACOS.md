@@ -7,13 +7,13 @@ The build creates a movable **Knot Studio.app** with its own Python, Tcl/Tk,
 scientific libraries, local models, numeric OCR, documentation, and examples.
 The built app does not need a source checkout, Homebrew, or an installed Python.
 
-The v0.2.0 build configuration targets **macOS 15.7.5 or later**. The locally
+The v0.1.1 build configuration targets **macOS 15.7.5 or later**. The locally
 verified application uses **Apple silicon (arm64)**. The build uses the current
 Python interpreter's native architecture. To prepare an Intel version, build
 on an Intel environment with matching Python and native dependencies and test
-it separately. Both architectures have passed automated packaging checks during
-development, but interactive use has not been verified on an Intel Mac.
-Revalidate the current source before distributing either build.
+it separately. The automated macOS build targets Apple silicon; Intel Mac
+packages are not provided. Revalidate the source and dependencies before
+distributing a build for another architecture.
 The arm64 archive cannot run on Intel Macs.
 
 ## Prepare a build environment
@@ -59,10 +59,10 @@ blocked by Gatekeeper. Include the [installation guide](INSTALLING.md) and
 disclose the signing status when sharing an app. The signing and notarization
 steps below provide Apple's standard distribution path.
 
-For version 0.2.0 on Apple silicon, the app is written to
+For version 0.1.1 on Apple silicon, the app is written to
 `dist/Knot Studio.app` and the app archive to
-`dist/KnotStudio-0.2.0-macOS-arm64.zip`. Matching source is written to
-`dist/KnotStudio-0.2.0-source.zip` and is also included inside the macOS archive.
+`dist/KnotStudio-0.1.1-macOS-arm64.zip`. Matching source is written to
+`dist/KnotStudio-0.1.1-source.zip` and is also included inside the macOS archive.
 `dist/SHA256SUMS.txt` records both archive checksums. Build output stays outside
 the repository's tracked files.
 

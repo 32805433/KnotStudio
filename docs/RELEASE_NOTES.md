@@ -1,4 +1,4 @@
-# Knot Studio 0.2.0
+# Knot Studio 0.1.1
 
 Knot Studio turns pictures of knots and links into editable diagrams. Draw,
 move strands, perform Reidemeister moves, smooth diagrams, and export images,

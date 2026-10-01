@@ -106,7 +106,7 @@ or dataset-review app is included.
 1. Update the version in `pyproject.toml` and `recognizer/__init__.py`, the
    changelog, and `docs/RELEASE_NOTES.md`. Commit normally; never rewrite a published tag.
 2. Run **Prepare release draft** from GitHub Actions on the desired commit,
-   supplying a fresh tag such as `v0.2.0`.
+   supplying a fresh tag such as `v0.1.1`.
 3. The workflow refuses an existing tag/release, builds all platforms, verifies
    checksums and that every source ZIP contains identical source, then creates
    a **draft** release with one combined checksum file and verification report.

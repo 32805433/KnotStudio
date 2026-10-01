@@ -24,6 +24,7 @@ except ImportError as exc:
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
+from recognizer import __version__
 from .render import (apply_rendered_appearance, arrow_polygon, arrows,
                      box_shapes, box_passages,
                      inherit_display_style, line_width, paths,
@@ -679,10 +680,10 @@ class DiagramEditor:
         help_menu = tk.Menu(menu, tearoff=False)
         help_menu.add_command(label='User guide', command=self.open_user_guide)
         help_menu.add_command(label='About Knot Studio', command=lambda: messagebox.showinfo(
-            'Knot Studio', 'Knot Studio 0.1.0\nLocal knot and link recognition and editing.\n\n'
+            'Knot Studio', f'Knot Studio {__version__}\nLocal knot and link recognition and editing.\n\n'
             'Distributed under GPL-3.0-or-later.\nIncludes work adapted from Kyle Miller’s KnotFolio.\n'
             'Layout minimization is inspired by Dirk Schütz’s KnotJob.\n\n'
-            'Images are processed on this Mac. No account or internet connection is required.\n'
+            'Images are processed on this computer. No account or internet connection is required.\n'
             'Recognition results need visual review.', parent=self.root))
         help_menu.add_command(label="Controls and limitations", command=lambda: messagebox.showinfo("Knot Studio", "Open an image to recognize it. Select a crossing or component, then press X to switch a crossing or R to reverse orientation. Delete removes the selected component.\n\nSelect / move: click to select, or drag a strand to deform a nearby part smoothly. Move radius controls the size of that neighborhood. Hold Shift as a Reidemeister II pair forms to create undercrossings; otherwise the moving strand passes over. You can change Shift during a drag; existing crossings keep their types. The graph and PD update through accepted Reidemeister II and III moves. A rejected position leaves the last accepted diagram in place; try a smaller move or a different radius. Dragging cannot add or remove a curl.\n\nAdd curl asks for a +/− crossing sign, a point away from crossings, and then a side. Simplify shades removable curls in green and removable bigons in purple. Click a shaded region to remove its one or two crossings. Escape cancels a gesture. Undo restores an entire edit.\n\nMinimize energy asks you to circle the tangle to relax, keeping its boundary fixed. Check Full screen region to use the visible diagram area immediately; Fit first to include the whole diagram. Stop keeps the displayed layout; Escape restores its start.\n\nPencil and Eraser edit the active drawing. Use Convert to drawing to draw on a clean diagram. Drawing normally passes over existing strands; hold Shift while drawing to pass underneath. Crossing gaps are inserted automatically. Then choose Recognize drawing.\n\nNeeds review means recognition is uncertain. A Drawing changed badge means you need to recognize the drawing to generate its diagram and PD. Inspect the diagram before using its PD code."))
         menu.add_cascade(label="Help", menu=help_menu)

@@ -6,7 +6,7 @@ resource tests also check the bundled example manifest and sample files. They
 do not read a database, research corpus, original checkout, or system font file.
 
 The suite checks drawing and crossing clearance on light and dark backgrounds,
-raster reconstruction and PD export, orientation, Reidemeister I and II moves,
+raster reconstruction and PD export, orientation, Reidemeister I, II, and III moves,
 twist-box expansion, energy reduction with fixed exterior geometry, recognition
 deadlines and isolated caches, and both bundled model files. The suite also covers
 freehand display smoothing, close-strand clearance, and shared canvas/TikZ geometry

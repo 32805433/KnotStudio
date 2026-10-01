@@ -77,5 +77,5 @@ Sample image credits and reuse terms are recorded in
 
 Keep the corresponding source, build scripts, dependency notices, and this file
 available with each binary release. Publish the matching source archive alongside
-the app archive. The [release guide](BUILDING_MACOS.md) includes the source and
+the app archive. The [release guide](BUILDING_DESKTOP.md) includes the source and
 notice checks used when preparing a release.
